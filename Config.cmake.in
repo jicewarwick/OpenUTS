@@ -1,0 +1,12 @@
+@PACKAGE_INIT@
+
+include("${CMAKE_CURRENT_LIST_DIR}/@PROJECT_NAME@Targets.cmake")
+
+include(CMakeFindDependencyMacro)
+find_dependency(nlohmann_json 3.9.0)
+find_dependency(SQLite3)
+find_dependency(CTP)
+
+check_required_components(${PROJECT_NAME})
+
+

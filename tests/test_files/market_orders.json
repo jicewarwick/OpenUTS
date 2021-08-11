@@ -1,0 +1,19 @@
+[
+    {
+        "account_name": "",
+        "broker_name": "",
+        "time_in_force": "GFD",
+        "contingent_condition": "immediately",
+        "direction": "long",
+        "exchange_id": "",
+        "hedge_flag": "speculation",
+        "instrument_id": "",
+        "limit_price": 0.0,
+        "open_close": "auto",
+        "order_price_type": "any_price",
+        "tick_offset": 1,
+        "level_offset": 1,
+        "reference_price": 0.0,
+        "volume": 1
+    }
+]

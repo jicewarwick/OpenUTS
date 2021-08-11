@@ -1,0 +1,40 @@
+*~
+*.autosave
+.*.swp
+*_pch.h.cpp
+*_resource.rc
+tags
+.DS_Store
+.directory
+Makefile*
+*.prl
+Thumbs.db
+
+# qtcreator generated files
+*.pro.user*
+
+# Visual Studio generated files
+*.ib_pdb_index
+*.idb
+*.ilk
+*.pdb
+*.sln
+*.suo
+*.vcproj
+*vcproj.*.*.user
+*.ncb
+*.sdf
+*.opensdf
+*.vcxproj
+*vcxproj.*
+.vs/
+
+# Python byte code
+*.pyc
+
+# others
+CMakeLists.txt.*
+build/
+.idea/
+CMakeSettings.json
+db.sqlite3
