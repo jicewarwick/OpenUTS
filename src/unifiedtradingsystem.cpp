@@ -328,21 +328,22 @@ vector<Order> UnifiedTradingSystem::ProcessAdvancedOrder(Order order) {
 
 	Ticker ticker = order.instrument_id;
 	std::ranges::transform(ticker, ticker.begin(), ::toupper);
-	auto loc = instrument_info_.find(ticker);
 
 	// check that instrument exist
+	auto loc = instrument_info_.find(ticker);
 	if (loc == instrument_info_.end()) {
 		throw OrderInfoError(id, fmt::format("InstrumentID: {} does not exist", ticker));
 	}
 	auto& instrument_info = loc->second;
 	auto& instrument_id = instrument_info.instrument_id;
-	auto& exchange_id = instrument_info.exchange_id;
+	auto& exchange = instrument_info.exchange;
 
 	order.instrument_id = instrument_id;
-	order.exchange_id = exchange_id;
+	order.exchange = exchange;
 
 	// time in force check
-	if ((exchange_id == "CZCE") && (order.time_in_force == TimeInForce::FOK)) {
+	// 郑州不支持FOK。
+	if ((exchange == Exchange::CZC) && (order.time_in_force == TimeInForce::FOK)) {
 		throw OrderInfoError(id, "CZCE do not support FOK orders!");
 	}
 
@@ -353,9 +354,9 @@ vector<Order> UnifiedTradingSystem::ProcessAdvancedOrder(Order order) {
 	}
 	switch (order.order_price_type) {
 		case OrderPriceType::AnyPrice:
-			if (exchange_id == "CFFEX") {
+			if (exchange == Exchange::CFE) {
 				order.order_price_type = OrderPriceType::FiveLevelPrice;
-			} else if (exchange_id == "SHFE") {
+			} else if (exchange == Exchange::SHF) {
 				order.order_price_type = OrderPriceType::LimitPrice;
 				order.limit_price =
 					(order.direction == Direction::Long) ? market_depth.upper_limit : market_depth.lower_limit;
@@ -377,7 +378,7 @@ vector<Order> UnifiedTradingSystem::ProcessAdvancedOrder(Order order) {
 			}
 			break;
 		case OrderPriceType::BestPrice:
-			if (exchange_id != "CFFEX") {
+			if (exchange != Exchange::CFE) {
 				order.order_price_type = OrderPriceType::LimitPrice;
 				order.limit_price =
 					(order.direction == Direction::Long) ? market_depth.ask[0].price : market_depth.bid[0].price;
@@ -396,10 +397,10 @@ vector<Order> UnifiedTradingSystem::ProcessAdvancedOrder(Order order) {
 			order.limit_price = market_depth.ask[static_cast<unsigned int>(order.level_offset - 1)].price;
 			break;
 		case OrderPriceType::FiveLevelPrice:
-			if (exchange_id != "CFFEX") {
-				// order.limit_price = (order.direction == Direction::Long) ? market_depth.ask[4].price :
-				// market_depth.bid[4].price;
-				throw OrderInfoError(id, "Only CFFEX support FiveLevelPrice");
+			if (exchange != Exchange::CFE) {
+				order.limit_price =
+					(order.direction == Direction::Long) ? market_depth.ask[4].price : market_depth.bid[4].price;
+				// throw OrderInfoError(id, "Only CFFEX support FiveLevelPrice");
 			}
 			break;
 	}
@@ -422,6 +423,11 @@ vector<Order> UnifiedTradingSystem::ProcessAdvancedOrder(Order order) {
 	}
 
 	vector<Order> order_cache;
+	// 上期所、能源中心两个交易所系统都是上期所的交易系统，都有平今平昨指令，其它交易所均只有开仓、平仓指令。
+	bool close_yesterday_exchange = ((exchange == Exchange::SHF) | (exchange == Exchange::INE));
+	if (!close_yesterday_exchange && (order.open_close == OpenCloseType::CloseYesterday)) {
+		order.open_close = OpenCloseType::Close;
+	}
 	switch (order.open_close) {
 		case OpenCloseType::Open: order_cache.push_back(order); break;
 		case OpenCloseType::Close: {
@@ -436,7 +442,7 @@ vector<Order> UnifiedTradingSystem::ProcessAdvancedOrder(Order order) {
 		case OpenCloseType::CloseYesterday: {
 			if (order.volume > holding_loc->second.pre_quantity) {
 				string msg = fmt::format("Closing volume {} is bigger than existing yesterday position({}) on {}",
-										 order.volume, holding_loc->second.total_quantity, order.instrument_id);
+										 order.volume, holding_loc->second.pre_quantity, order.instrument_id);
 				throw OrderInfoError(id, msg);
 			}
 			order_cache.push_back(order);
@@ -452,10 +458,28 @@ vector<Order> UnifiedTradingSystem::ProcessAdvancedOrder(Order order) {
 			break;
 		}
 		case OpenCloseType::Auto: {
+			// no reverse position, open new position directly
 			if (holding_loc == holding.end()) {
-				// no reverse position, open new position directly
 				order.open_close = OpenCloseType::Open;
 				order_cache.push_back(order);
+				break;
+			}
+
+			// optimize closing positions
+			// 对于不区分平今平昨的交易所
+			Volume volume_left = order.volume;
+			if (!close_yesterday_exchange) {
+				Volume close_quantity = std::max(order.volume, holding_loc->second.today_quantity);
+				order.open_close = OpenCloseType::Close;
+				order.volume = close_quantity;
+				order_cache.push_back(order);
+				volume_left -= close_quantity;
+
+				if (volume_left > 0) {
+					order.open_close = OpenCloseType::Open;
+					order.volume = volume_left;
+					order_cache.push_back(order);
+				}
 				break;
 			}
 
@@ -465,24 +489,18 @@ vector<Order> UnifiedTradingSystem::ProcessAdvancedOrder(Order order) {
 				switch (instrument_info_.at(instrument_id).instrument_type) {
 					case InstrumentType::Option: close_today = true; break;
 					case InstrumentType::Future:
-						if (exchange_id == "CFFEX") {
-							close_yesterday = false;
+						if (close_today_cache_.contains(instrument_id)) {
+							close_today = close_today_cache_.at(instrument_id);
 						} else {
-							if (close_today_cache_.contains(instrument_id)) {
-								close_today = close_today_cache_.at(instrument_id);
-							} else {
-								InstrumentCommissionRate commission_info;
-								commission_info = account->QueryCommissionRate(instrument_id, InstrumentType::Future);
-								close_today = IfCloseToday(commission_info);
-								close_today_cache_.emplace(instrument_id, close_today);
-							}
+							InstrumentCommissionRate commission_info;
+							commission_info = account->QueryCommissionRate(instrument_id, InstrumentType::Future);
+							close_today = IfCloseToday(commission_info);
+							close_today_cache_.emplace(instrument_id, close_today);
 						}
 						break;
 					default: break;
 				}
 			}
-
-			Volume volume_left = order.volume;
 
 			Volume close_today_volume = close_today ? std::min(volume_left, holding_loc->second.today_quantity) : 0;
 			if (close_today_volume != 0) {
@@ -553,7 +571,7 @@ void UnifiedTradingSystem::CancelAllPendingOrders() {
 vector<Order> UnifiedTradingSystem::ReversePosition(HoldingRecord rec) {
 	Order order{
 		.instrument_id = rec.instrument_id,
-		.exchange_id = rec.exchange_id,
+		.exchange = rec.exchange,
 		.hedge_flag = rec.hedge_flag,
 		.direction = ReverseDirection(rec.direction),
 		.contingent_condition = OrderContingentCondition::Immediately,

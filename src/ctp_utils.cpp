@@ -77,7 +77,7 @@ InstrumentInfo TranslateInstrumentInfo(const CThostFtdcInstrumentField* const pI
 		.is_trading = (pInstrument->IsTrading == '1'),
 		.instrument_id = pInstrument->InstrumentID,
 		.instrument_name = GB2312ToUTF8(pInstrument->InstrumentName),
-		.exchange_id = pInstrument->ExchangeID,
+		.exchange = kExchangeTranslator.at(pInstrument->ExchangeID),
 		.product_id = pInstrument->ProductID,
 		.max_market_order_volume = pInstrument->MaxMarketOrderVolume,
 		.min_market_order_volume = pInstrument->MinMarketOrderVolume,
@@ -109,7 +109,7 @@ InstrumentInfo TranslateInstrumentInfo(const CThostFtdcInstrumentField* const pI
 TradingRecord TradeField2TradingRecord(CThostFtdcTradeField* pTrade) {
 	TradingRecord rec{
 		.order_ref = atol(pTrade->OrderRef),
-		.exchange_id = pTrade->ExchangeID,
+		.exchange = kExchangeTranslator.at(pTrade->ExchangeID),
 		.instrument_id = pTrade->InstrumentID,
 		.open_close = kOpenCloseTranslator.at(pTrade->OffsetFlag),
 		.direction = (pTrade->Direction == THOST_FTDC_D_Buy) ? Direction::Long : Direction::Short,
@@ -126,7 +126,7 @@ OrderRecord OrderField2OrderRecord(CThostFtdcOrderField* pOrder) {
 		.front_id = pOrder->FrontID,
 		.session_id = pOrder->SessionID,
 		.order_ref = atol(pOrder->OrderRef),
-		.exchange_id = pOrder->ExchangeID,
+		.exchange = kExchangeTranslator.at(pOrder->ExchangeID),
 		.instrument_id = pOrder->InstrumentID,
 		.open_close = kOpenCloseTranslator.at(pOrder->CombOffsetFlag[0]),
 		.direction = (pOrder->Direction == THOST_FTDC_D_Buy) ? Direction::Long : Direction::Short,

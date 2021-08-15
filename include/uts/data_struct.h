@@ -26,14 +26,13 @@ using UserProductInfo = std::string;				 ///< UserProductInfo
 using AppID = std::string;							 ///< AppID
 using AuthCode = std::string;						 ///< AuthID
 
-using ExchangeID = std::string;					 ///< 交易所简称
-using ProductID = std::string;					 ///< 产品品种
-using Ticker = std::string;						 ///< 合约代码
-using IndexFutureTicker = Ticker;				 ///< 股指期货合约代码
-using OptionTicker = Ticker;					 ///< 期权合约代码
-using CallOptionTicker = Ticker;				 ///< 看涨期权合约代码
-using PutOptionTicker = Ticker;					 ///< 看跌期权代码
-using Contract = std::pair<Ticker, ExchangeID>;	 ///< 合约索引
+using ExchangeName = std::string;  ///< 交易所名称
+using ProductID = std::string;	   ///< 产品品种
+using Ticker = std::string;		   ///< 合约代码
+using IndexFutureTicker = Ticker;  ///< 股指期货合约代码
+using OptionTicker = Ticker;	   ///< 期权合约代码
+using CallOptionTicker = Ticker;   ///< 看涨期权合约代码
+using PutOptionTicker = Ticker;	   ///< 看跌期权代码
 
 using DateTimeStr = std::string;  ///< 日期时间字符串(YYYY-MM-DD hh:mm:ss.mmm)
 using DateStr = std::string;	  ///< 日期字符串(YYYY-MM-DD)
@@ -148,7 +147,8 @@ enum class HedgeFlagType {
 };
 
 /// 交易所类型, 和Wind代码一致
-enum class ExchangeType {
+enum class Exchange {
+	NA,	  ///< 未知
 	SHF,  ///< 上期所
 	DCE,  ///< 大商所
 	CZC,  ///< 郑商所
@@ -160,6 +160,7 @@ enum class ExchangeType {
 	OC,	  ///< 全国中小企业股份转让系统,三板
 	HK,	  ///< 港交所
 };
+using Contract = std::pair<Ticker, Exchange>;  ///< 合约索引
 
 /// 合约生命周期状态类型
 enum class InstLifePhaseType {
@@ -320,7 +321,7 @@ struct InstrumentInfo {
 	bool is_trading;									 ///< 是否在交易
 	Ticker instrument_id;								 ///< 合约代码
 	std::string instrument_name;						 ///< 合约名称
-	ExchangeID exchange_id;								 ///< 交易所
+	Exchange exchange;									 ///< 交易所
 	ProductID product_id;								 ///< 产品代码
 	YearMonth deliver_month;							 ///< 交割月份
 	Volume max_market_order_volume;						 ///< 最大市价委托数量
@@ -359,7 +360,7 @@ struct InstrumentIndex {
 
 /// 持仓记录
 struct HoldingRecord {
-	ExchangeID exchange_id;		///< 交易所简称
+	Exchange exchange;			///< 交易所
 	Ticker instrument_id;		///< 合约代码
 	Direction direction;		///< 持仓方向
 	HedgeFlagType hedge_flag;	///< 投机套保标识
@@ -371,7 +372,7 @@ struct HoldingRecord {
 /// 成交记录
 struct TradingRecord {
 	OrderRef order_ref;		   ///< 成交编号
-	ExchangeID exchange_id;	   ///< 交易所简称
+	Exchange exchange;		   ///< 交易所
 	Ticker instrument_id;	   ///< 合约代码
 	OpenCloseType open_close;  ///< 开平
 	Direction direction;	   ///< 交易方向
@@ -386,7 +387,7 @@ struct OrderRecord {
 	FrontID front_id;								///< 交易前置ID
 	SessionID session_id;							///< Session ID
 	OrderRef order_ref;								///< 委托编号
-	ExchangeID exchange_id;							///< 交易所简称
+	Exchange exchange;								///< 交易所
 	Ticker instrument_id;							///< 合约代码
 	OpenCloseType open_close;						///< 开平
 	Direction direction;							///< 交易方向
@@ -408,7 +409,7 @@ struct Order {
 	AccountName account_name;						///< 账户名
 	BrokerName broker_name;							///< 经纪商名称
 	Ticker instrument_id;							///< 合约代码
-	ExchangeID exchange_id;							///< 交易所简称
+	Exchange exchange = Exchange::NA;				///< 交易所
 	TimeInForce time_in_force;						///< 有效时间
 	OpenCloseType open_close;						///< 开平
 	HedgeFlagType hedge_flag;						///< 投机套保标识

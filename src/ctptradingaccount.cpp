@@ -511,7 +511,7 @@ void CTPTradingAccount::OnRspQryInvestorPosition(CThostFtdcInvestorPositionField
 			loc.pre_quantity += pInvestorPosition->YdPosition;
 		} else {
 			HoldingRecord rec{
-				.exchange_id = pInvestorPosition->ExchangeID,
+				.exchange = kExchangeTranslator.at(pInvestorPosition->ExchangeID),
 				.instrument_id = instrument_id,
 				.direction = direction,
 				.hedge_flag = hedge_flag,
@@ -545,7 +545,7 @@ void CTPTradingAccount::OnRtnTrade(CThostFtdcTradeField* pTrade) {
 
 		if (trade.open_close == OpenCloseType::CloseYesterday) {
 			loc.pre_quantity -= trade.volume;
-		} else if ((trade.exchange_id == "CFFEX") && (trade.open_close == OpenCloseType::Close)) {
+		} else if ((trade.exchange == Exchange::CFE) && (trade.open_close == OpenCloseType::Close)) {
 			// TODO: change to check if open before
 			int close_today_quantity = std::min(loc.today_quantity, trade.volume);
 			loc.today_quantity -= close_today_quantity;
@@ -555,8 +555,7 @@ void CTPTradingAccount::OnRtnTrade(CThostFtdcTradeField* pTrade) {
 		}
 	} else {
 		trade.volume = EnumToPositiveOrNegative<OpenCloseType>(trade.open_close) * trade.volume;
-		HoldingRecord rec{
-			trade.exchange_id, trade.instrument_id, trade.direction, trade.hedge_flag, trade.volume, 0, 0};
+		HoldingRecord rec{trade.exchange, trade.instrument_id, trade.direction, trade.hedge_flag, trade.volume, 0, 0};
 
 		if (trade.open_close == OpenCloseType::CloseYesterday) {
 			rec.pre_quantity = trade.volume;
@@ -623,7 +622,7 @@ CThostFtdcInputOrderField CTPTradingAccount::NativeOrder2CTPOrder(const Order& o
 	strncpy(field.InvestorID, account_number_.c_str(), sizeof(field.InvestorID));
 	strncpy(field.UserID, account_number_.c_str(), sizeof(field.UserID));
 	strncpy(field.InstrumentID, order.instrument_id.c_str(), sizeof(field.InstrumentID));
-	strncpy(field.ExchangeID, order.exchange_id.c_str(), sizeof(field.ExchangeID));
+	strncpy(field.ExchangeID, kExchangeTranslator.at(order.exchange).c_str(), sizeof(field.ExchangeID));
 	field.ForceCloseReason = THOST_FTDC_FCC_NotForceClose;
 	field.MinVolume = 1;
 	field.IsAutoSuspend = 0;
@@ -741,7 +740,7 @@ void CTPTradingAccount::CancelOrder(OrderIndex index) {
 	strncpy(field.InvestorID, account_number_.c_str(), sizeof(field.InvestorID));
 	strncpy(field.UserID, account_number_.c_str(), sizeof(field.UserID));
 	strncpy(field.InstrumentID, rec.instrument_id.c_str(), sizeof(field.InstrumentID));
-	strncpy(field.ExchangeID, rec.exchange_id.c_str(), sizeof(field.ExchangeID));
+	strncpy(field.ExchangeID, kExchangeTranslator.at(rec.exchange).c_str(), sizeof(field.ExchangeID));
 	field.FrontID = rec.front_id;
 	field.SessionID = rec.session_id;
 	std::to_chars(field.OrderRef, field.OrderRef + sizeof(field.OrderRef), static_cast<OrderRef>(order_ref_));

@@ -65,7 +65,7 @@ int main(int argc, char* argv[]) {
 
 	vector<Ticker> tickers;
 	for (auto& [ticker, info] : uts.instrument_info()) {
-		if (info.exchange_id == "SHFE") {
+		if (info.exchange == Exchange::SHF) {
 			tickers.push_back(info.instrument_id);
 			spdlog::trace("{} added to the list.", ticker);
 		}

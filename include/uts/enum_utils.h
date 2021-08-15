@@ -5,6 +5,20 @@
 
 using nlohmann::json;
 
+NLOHMANN_JSON_SERIALIZE_ENUM(Exchange, {
+										   {Exchange::NA, "NA"},
+										   {Exchange::SHF, "SHF"},
+										   {Exchange::DCE, "DCE"},
+										   {Exchange::CZC, "CZC"},
+										   {Exchange::CFE, "CFE"},
+										   {Exchange::INE, "INE"},
+										   {Exchange::SH, "SH"},
+										   {Exchange::SZ, "SZ"},
+										   {Exchange::SGE, "SGE"},
+										   {Exchange::OC, "OC"},
+										   {Exchange::HK, "HK"},
+									   })
+
 NLOHMANN_JSON_SERIALIZE_ENUM(InstrumentType, {
 												 {InstrumentType::Stock, "stock"},
 												 {InstrumentType::Future, "future"},
@@ -116,7 +130,7 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(BrokerInfo, broker_name, API_type, broker_id,
 								   auth_code, app_id, query_rate_per_second)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(MySQLConnectionInfo, addr, db_name, user_name, password)
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(InstrumentInfo, instrument_type, instrument_id, instrument_name, exchange_id,
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(InstrumentInfo, instrument_type, instrument_id, instrument_name, exchange,
 								   product_id, volume_multiplier, price_ticker, long_margin_ratio, short_margin_ratio,
 								   use_max_margin_side_algorithm, underlying_instrument_id, strike_price,
 								   underlying_multiple, option_type)
@@ -126,16 +140,16 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(InstrumentCommissionRate, instrument_id, open
 								   close_today_ratio_by_volume)
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(CapitalInfo, balance, margin_used, available, commission, withdraw_allowance)
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(HoldingRecord, exchange_id, instrument_id, hedge_flag, direction, total_quantity,
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(HoldingRecord, exchange, instrument_id, hedge_flag, direction, total_quantity,
 								   today_quantity, pre_quantity)
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(TradingRecord, order_ref, exchange_id, instrument_id, hedge_flag, open_close,
-								   direction, price, volume, time)
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(OrderRecord, front_id, session_id, order_ref, exchange_id, instrument_id, hedge_flag,
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(TradingRecord, order_ref, exchange, instrument_id, hedge_flag, open_close, direction,
+								   price, volume, time)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(OrderRecord, front_id, session_id, order_ref, exchange, instrument_id, hedge_flag,
 								   open_close, direction, limit_price, total_volume, traded_volume, remained_volume,
 								   order_price_type, reference_price, time_condition, contingent_condition,
 								   reference_price, order_status, time)
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Order, account_name, broker_name, exchange_id, instrument_id, open_close, hedge_flag,
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Order, account_name, broker_name, exchange, instrument_id, open_close, hedge_flag,
 								   direction, volume, order_price_type, limit_price, tick_offset, level_offset,
 								   time_in_force, contingent_condition, reference_price)
 

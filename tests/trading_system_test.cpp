@@ -20,7 +20,7 @@ protected:
 	static UnifiedTradingSystem* uts_;
 	static std::map<Ticker, InstrumentInfo> instrument_info_;
 	const static vector<string> test_products;
-	static vector<std::pair<Ticker, ExchangeID>> testing_instrument_;
+	static vector<std::pair<Ticker, Exchange>> testing_instrument_;
 
 	vector<Order> OrderTestTemplate(string file_name);
 
@@ -35,7 +35,7 @@ protected:
 		for (const auto& it : test_products) {
 			auto loc = std::find_if(instrument_info_.begin(), instrument_info_.end(),
 									[&](auto input) { return input.second.product_id == it; });
-			testing_instrument_.emplace_back(loc->second.instrument_id, loc->second.exchange_id);
+			testing_instrument_.emplace_back(loc->second.instrument_id, loc->second.exchange);
 		}
 	}
 
@@ -48,7 +48,7 @@ protected:
 UnifiedTradingSystem* TradingSystemTest::uts_ = nullptr;
 std::map<Ticker, InstrumentInfo> TradingSystemTest::instrument_info_ = {};
 const vector<string> TradingSystemTest::test_products{"ag", "AP", "c", "IC"};
-vector<std::pair<Ticker, ExchangeID>> TradingSystemTest::testing_instrument_;
+vector<std::pair<Ticker, Exchange>> TradingSystemTest::testing_instrument_;
 
 void AssureTradingBroker(std::string& broker_name) {
 	if (broker_name.starts_with("simnow")) {
@@ -71,7 +71,7 @@ vector<Order> TradingSystemTest::OrderTestTemplate(string file_name) {
 		auto loc = std::find_if(instrument_info_.begin(), instrument_info_.end(),
 								[&](auto input) { return input.second.product_id == it; });
 		order.instrument_id = loc->second.instrument_id;
-		order.exchange_id = loc->second.exchange_id;
+		order.exchange = loc->second.exchange;
 		orders.push_back(order);
 	}
 

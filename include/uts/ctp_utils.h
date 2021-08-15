@@ -60,6 +60,14 @@ private:
 	const std::map<T1, T2> map1_;
 	std::map<T2, T1> map2_;
 };
+const EnumTranslator kExchangeTranslator{std::map<std::string, Exchange>{
+	{"", Exchange::NA},
+	{"SHFE", Exchange::SHF},
+	{"DCE", Exchange::DCE},
+	{"CZCE", Exchange::CZC},
+	{"CFFEX", Exchange::CFE},
+	{"INE", Exchange::INE},
+}};
 
 const EnumTranslator kContingentConditionTranslator{
 	std::map<OrderContingentCondition, TThostFtdcContingentConditionType>{

@@ -80,7 +80,7 @@ private:
 	std::map<std::string, Volume> pre_volume_;
 };
 
- /// 可被观察的CTP行情基类
+/// 可被观察的CTP行情基类
 class ObservableCTPMarketDataBase : public CTPMarketDataBase, public Observable {
 public:
 	ObservableCTPMarketDataBase(const std::vector<IPAddress>& server_addr) : CTPMarketDataBase(server_addr){};
