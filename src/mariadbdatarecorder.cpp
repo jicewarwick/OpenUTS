@@ -1,4 +1,4 @@
-#include "mariadbdatarecorder.h"
+﻿#include "mariadbdatarecorder.h"
 
 #include <stdexcept>
 
@@ -13,27 +13,27 @@ MariadbDataRecorder::MariadbDataRecorder(const IPAddress& addr, const std::strin
 	conn_ = sql::DriverManager::getConnection(url, user_name, password);
 
 	sql::Statement* create_stmnt = conn_->createStatement();
-	const char* create_table_query =
-		"CREATE TABLE IF NOT EXISTS `tickdata` ( \
-		`DateTime` DATETIME(6) NOT NULL, \
-		`ID` VARCHAR(20) NOT NULL COLLATE 'utf8_general_ci', \
-		`Open` DECIMAL(5,1) NULL DEFAULT NULL, \
-		`High` DECIMAL(5,1) NULL DEFAULT NULL, \
-		`Low` DECIMAL(5,1) NULL DEFAULT NULL, \
-		`Latest` DECIMAL(5,1) NULL DEFAULT NULL, \
-		`TurnOver` BIGINT(20) NULL DEFAULT NULL, \
-		`Volume` BIGINT(20) NULL DEFAULT NULL, \
-		`OpenInterest` BIGINT(20) NULL DEFAULT NULL, \
-		`BidPrice1` DECIMAL(5,1) NULL DEFAULT NULL, \
-		`BidVolume1` INT(11) NULL DEFAULT NULL, \
-		`AskPrice1` DECIMAL(5,1) NULL DEFAULT NULL, \
-		`AskVolume1` INT(11) NULL DEFAULT NULL, \
-		PRIMARY KEY (`DateTime`, `ID`) USING BTREE, \
-		INDEX `ID` (`ID`) USING BTREE \
-	)";
 	try {
+		const char* create_table_query =
+			"CREATE TABLE IF NOT EXISTS `tickdata` ( \
+			`DateTime` DATETIME(6) NOT NULL, \
+			`ID` VARCHAR(20) NOT NULL COLLATE 'utf8_general_ci', \
+			`Open` DECIMAL(5,1) NULL DEFAULT NULL, \
+			`High` DECIMAL(5,1) NULL DEFAULT NULL, \
+			`Low` DECIMAL(5,1) NULL DEFAULT NULL, \
+			`Latest` DECIMAL(5,1) NULL DEFAULT NULL, \
+			`TurnOver` BIGINT(20) NULL DEFAULT NULL, \
+			`Volume` BIGINT(20) NULL DEFAULT NULL, \
+			`OpenInterest` BIGINT(20) NULL DEFAULT NULL, \
+			`BidPrice1` DECIMAL(5,1) NULL DEFAULT NULL, \
+			`BidVolume1` INT(11) NULL DEFAULT NULL, \
+			`AskPrice1` DECIMAL(5,1) NULL DEFAULT NULL, \
+			`AskVolume1` INT(11) NULL DEFAULT NULL, \
+			PRIMARY KEY (`DateTime`, `ID`) USING BTREE, \
+			INDEX `ID` (`ID`) USING BTREE \
+			)";
 		create_stmnt->executeUpdate(create_table_query);
-	} catch (sql::SQLException& e) {
+	} catch (const sql::SQLException& e) {
 		spdlog::error("Error creating tickdata table: {}", e.what());
 		delete create_stmnt;
 		throw e;

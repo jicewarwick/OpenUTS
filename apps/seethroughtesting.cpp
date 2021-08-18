@@ -1,42 +1,28 @@
-#include <chrono>
-#include <iostream>
-#include <string>
+﻿#include <chrono>
 #include <thread>
 #include <vector>
 
 #include <CLI/CLI.hpp>
-#include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 
 #include "trading_utils.h"
 #include "unifiedtradingsystem.h"
-#include "utils.h"
 #include "utsexceptions.h"
-
-using std::string, nlohmann::json, std::vector;
 
 int main(int argc, char* argv[]) {
 	std::filesystem::path config_file;
 
 	CLI::App app{"Seethrough Testing routines"};
-	app.add_option("-c,--config", config_file, "json config file to login into CTP account")
-		->required()
-		->check(CLI::ExistingFile);
-	CLI11_PARSE(app, argc, argv);
+	app.add_option("-c,--config", config_file, "UTS config db location")->required()->check(CLI::ExistingFile);
+	CLI11_PARSE(app, argc, argv)
 
-	json config;
-	try {
-		config = ReadJsonFile(config_file);
-	} catch (std::exception& e) {
-		spdlog::error(e.what());
-		return EXIT_FAILURE;
-	}
-
+	UTSConfigDB db(config_file);
 	UnifiedTradingSystem uts{};
 	try {
-		uts.InitFromJsonConfig(config);
-	} catch (...) {
-		spdlog::error("Info in {} is imcomplete or wrong. Please recheck. Exiting.", config_file.string().c_str());
+		uts.InitFromDBConfig(db);
+	} catch (const std::exception& e) {
+		spdlog::error("{}", e.what());
+		spdlog::error("Error init from sqlite3 database. Please recheck. Exiting.");
 		return EXIT_FAILURE;
 	}
 
@@ -45,25 +31,14 @@ int main(int argc, char* argv[]) {
 	AccountName account_name = account.first;
 	BrokerName broker_name = account.second;
 
-	try {
-		uts.LogOn();
-	} catch (FirstLoginPasswordNeedChangeError& e) {
-		if (config.count("new_password")) {
-			string new_password = config.at("new_password").get<string>();
-			if (uts.GetHandle(account)->UpdatePassword(new_password)) {
-				uts.LogOn();
-			} else {
-				throw std::move(e);
-			}
-		} else {
-			throw std::move(e);
-		}
-	}
+	if (!account_name.ends_with("test")) { throw std::runtime_error("testing account name must end with test!"); }
+
+	uts.LogOn();
 	uts.QueryInstruments();
 	uts.SubscribeInstruments();
 	std::this_thread::sleep_for(std::chrono::seconds(1));
 
-	vector<Ticker> tickers;
+	std::vector<Ticker> tickers;
 	for (auto& [ticker, info] : uts.instrument_info()) {
 		if (info.exchange == Exchange::SHF) {
 			tickers.push_back(info.instrument_id);

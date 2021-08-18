@@ -235,7 +235,7 @@ MarketDepth CTPMarketData::CTPMarketData2MarketDepth(CThostFtdcDepthMarketDataFi
 				  .last = pDepthMarketData->LastPrice,
 				  .volume = volume,
 				  .turnover = turnover};
-	md.open_interest = static_cast<int>(pDepthMarketData->OpenInterest),
+	md.open_interest = static_cast<int>(pDepthMarketData->OpenInterest);
 	md.delta = SanitizeData(pDepthMarketData->CurrDelta);
 	md.ask = {
 		PriceVolume{SanitizeData(pDepthMarketData->AskPrice1), pDepthMarketData->AskVolume1},

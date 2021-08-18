@@ -1,7 +1,6 @@
 ﻿#include "utils.h"
 
 #include <filesystem>
-#include <iostream>
 #include <string>
 #include <vector>
 
@@ -52,14 +51,23 @@ TEST(UtilsTest, PutCallSwitchTest) {
 }
 
 TEST(DBConfigTest, DBRuns) {
-	UTSConfigDB conf("./test_files/db.sqlite3");
+	UTSConfigDB conf("./test_files/sample_db.sqlite3");
 	std::vector<IPAddress> t1 = conf.UnSpeedTestedCTPMDServers();
-	std::vector<IPAddress> t2 = conf.FartestCTPMDServers(10);
-	std::vector<Ticker> t3 = conf.CurrentIFIOTickers();
+	std::vector<IPAddress> t2 = conf.FartestCTPMDServers(1);
+	std::vector<Ticker> t3 = conf.GetSubscriptionTickers();
+	// GTEST_ASSERT_EQ(t1.size(), 0);
+	GTEST_ASSERT_EQ(t2.size(), 1);
+	// GTEST_ASSERT_GT(t3.size(), 10);
 
-	GTEST_ASSERT_EQ(t1.size(), 0);
-	GTEST_ASSERT_EQ(t2.size(), 10);
-	GTEST_ASSERT_GT(t3.size(), 10);
+	std::map<BrokerName, BrokerInfo> broker_id_info = conf.GetBrokerInfo();
+	GTEST_ASSERT_EQ(broker_id_info.at("simnow").broker_id, "9999");
+
+	std::vector<AccountInfo> account_info = conf.GetAccountInfo();
+	GTEST_ASSERT_EQ(account_info[0].account_name, "simnow_test");
+
+	MySQLConnectionInfo conn_info = conf.GetMySQLConnectionInfo();
+	GTEST_ASSERT_EQ(conn_info.addr, "127.0.0.1");
+	GTEST_ASSERT_EQ(conn_info.db_name, "asharedata");
 }
 
 TEST(JsonTest, FileNotExist) {

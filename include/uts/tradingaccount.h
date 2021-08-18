@@ -68,6 +68,7 @@ public:
 	/// 查询市场上的合约
 	virtual std::map<Ticker, InstrumentInfo> QueryInstruments() = 0;
 	/// 查询合约的手续费
+	virtual std::map<Ticker, InstrumentCommissionRate> QueryCommissionRate() = 0;
 	virtual InstrumentCommissionRate QueryCommissionRate(const Ticker&, InstrumentType) = 0;
 
 	/// 查询净持仓

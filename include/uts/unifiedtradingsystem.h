@@ -7,6 +7,7 @@
 #include <CTP/ThostFtdcUserApiStruct.h>
 #include <nlohmann/json.hpp>
 #include <uts/data_struct.h>
+#include <uts/dbconfig.h>
 #include <uts/market_data.h>
 #include <uts/tradingaccount.h>
 
@@ -38,13 +39,14 @@ public:
 	void AddMarketDataSource(const std::vector<IPAddress>& server_addr);
 
 	void InitFromJsonConfig(nlohmann::json config);
+	void InitFromDBConfig(const UTSConfigDB& config);
 
 	/**
 	 * @brief 返回合约基本信息
 	 * @return 合约基本信息
 	 * @pre 需在(至少一个)账户登录后调用`QueryInstruments`后调用才会有结果.
 	 */
-	std::map<Ticker, InstrumentInfo> instrument_info() const { return instrument_info_; };
+	std::map<Ticker, InstrumentInfo> instrument_info() const { return instrument_info_; }
 
 	std::map<Account, std::map<InstrumentIndex, HoldingRecord>> GetHolding() const;
 	std::map<Account, std::vector<TradingRecord>> GetTrades() const;

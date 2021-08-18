@@ -26,9 +26,9 @@ public:
 	~CTPTradingAccount() override;
 
 	virtual CapitalInfo Capital() const override;
-	virtual const std::map<InstrumentIndex, HoldingRecord> holding() const;
-	virtual const std::vector<TradingRecord> trades() const;
-	virtual const std::map<OrderIndex, OrderRecord> orders() const;
+	virtual const std::map<InstrumentIndex, HoldingRecord> holding() const override;
+	virtual const std::vector<TradingRecord> trades() const override;
+	virtual const std::map<OrderIndex, OrderRecord> orders() const override;
 
 	// login
 	void LogOnSync() override;
@@ -38,12 +38,13 @@ public:
 	void LogOffSync() noexcept override;
 	void LogOffAsync() noexcept override;
 
-	void QueryCapitalSync();
+	void QueryCapitalSync() override;
 	// change password
 	bool UpdatePassword(const Password& new_password) override;
 
 	// query market info
 	std::map<Ticker, InstrumentInfo> QueryInstruments() override;
+	std::map<Ticker, InstrumentCommissionRate> QueryCommissionRate() override;
 	InstrumentCommissionRate QueryCommissionRate(const Ticker&, InstrumentType) override;
 
 	// order
@@ -121,6 +122,7 @@ private:
 	std::set<OrderIndex> cancelable_orders_;
 
 	// query
+	void TestQueryRequestsPerSecond();
 	void QueryCapitalAsync();
 	void QueryPreHolding();
 

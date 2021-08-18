@@ -55,7 +55,7 @@ inline std::tuple<YearMonth, OptionType, Strike> StockIndexOptionInfo(const Tick
 }
 
 inline long HashOptionTicker(const OptionTicker& ticker) {
-	long k = StockIndexOptionStrike(ticker);
+	long k = static_cast<long>(StockIndexOptionStrike(ticker));
 	long month = atoi(StockIndexOptionYearMonth(ticker).c_str());
 	return month * 10000 + k;
 }

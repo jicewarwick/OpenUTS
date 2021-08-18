@@ -26,8 +26,7 @@ namespace fs = std::filesystem;
 CTPTradingAccount::CTPTradingAccount(const AccountInfo& account_info, const BrokerInfo& ctp_broker_info)
 	: TradingAccount(account_info), trade_server_addr_(ctp_broker_info.trade_server_addr),
 	  broker_id_(ctp_broker_info.broker_id), user_product_info_(ctp_broker_info.user_product_info),
-	  auth_code_(ctp_broker_info.auth_code), app_id_(ctp_broker_info.app_id),
-	  rate_throttler_(RateThrottler(ctp_broker_info.query_rate_per_second, seconds(1))) {
+	  auth_code_(ctp_broker_info.auth_code), app_id_(ctp_broker_info.app_id) {
 	connection_status_ = ConnectionStatus::Initializing;
 	try {
 		cache_path_ = CreateTempFlowFolder("_trade_flow");
@@ -355,6 +354,13 @@ void CTPTradingAccount::OnRspQryInstrument(CThostFtdcInstrumentField* pInstrumen
 	if (bIsLast) { query_cv_.notify_one(); }
 }
 
+std::map<Ticker, InstrumentCommissionRate> CTPTradingAccount::QueryCommissionRate() {
+	TestQueryRequestsPerSecond();
+	for (auto& [instrument_index, instrument_info] : instrument_info_) {
+		QueryCommissionRate(instrument_info.instrument_id, instrument_info.instrument_type);
+	}
+	return instrument_commission_rate_;
+}
 /**
  * @brief 查询交易手续费
  * @param ticker 合约代码
@@ -392,7 +398,7 @@ InstrumentCommissionRate CTPTradingAccount::QueryCommissionRate(const Ticker& ti
 			}
 			break;
 		}
-		default: throw(UnknownReturnDataError()); break;
+		default: throw(UnknownReturnDataError());
 	}
 	if (instrument_commission_rate_.contains(ticker)) {
 		return instrument_commission_rate_.at(ticker);
@@ -543,25 +549,55 @@ void CTPTradingAccount::OnRtnTrade(CThostFtdcTradeField* pTrade) {
 		auto& loc = holding_.at(index);
 		loc.total_quantity += EnumToPositiveOrNegative<OpenCloseType>(trade.open_close) * trade.volume;
 
-		if (trade.open_close == OpenCloseType::CloseYesterday) {
-			loc.pre_quantity -= trade.volume;
-		} else if ((trade.exchange == Exchange::CFE) && (trade.open_close == OpenCloseType::Close)) {
-			// TODO: change to check if open before
-			int close_today_quantity = std::min(loc.today_quantity, trade.volume);
-			loc.today_quantity -= close_today_quantity;
-			loc.pre_quantity -= (trade.volume - close_today_quantity);
-		} else {
-			loc.today_quantity += EnumToPositiveOrNegative<OpenCloseType>(trade.open_close) * trade.volume;
+		switch (trade.open_close) {
+			case OpenCloseType::Open: {
+				loc.today_quantity += trade.volume;
+				break;
+			}
+			case OpenCloseType::CloseToday: {
+				// 上期所、能源中心的平今仓按今仓先开先平顺序对持仓明细进行平仓处理，平仓指令按昨仓先开先平顺序对持仓明细进行平仓处理。
+				loc.today_quantity -= trade.volume;
+				break;
+			}
+			case OpenCloseType::CloseYesterday: {
+				// 上期所、能源中心的平今仓按今仓先开先平顺序对持仓明细进行平仓处理，平仓指令按昨仓先开先平顺序对持仓明细进行平仓处理。
+				loc.pre_quantity += trade.volume;
+				break;
+			}
+			case OpenCloseType::Close: {
+				switch (trade.exchange) {
+					case Exchange::DCE: {
+						// 大连，如果当日有开仓，则先平今再平昨。
+						Volume vol = std::max(loc.today_quantity, trade.volume);
+						loc.today_quantity -= vol;
+						loc.pre_quantity -= (trade.volume - vol);
+						break;
+					}
+					case Exchange::CFE:
+						// 中金所，先开先平。
+						[[fallthrough]];
+					case Exchange::CZC: {
+						// 郑商所，先开先平。
+						Volume vol = std::max(loc.pre_quantity, trade.volume);
+						loc.pre_quantity -= vol;
+						loc.today_quantity -= (trade.volume - vol);
+						break;
+					}
+					default: break;
+				}
+				break;
+			}
+			default: break;
 		}
 	} else {
-		trade.volume = EnumToPositiveOrNegative<OpenCloseType>(trade.open_close) * trade.volume;
-		HoldingRecord rec{trade.exchange, trade.instrument_id, trade.direction, trade.hedge_flag, trade.volume, 0, 0};
-
-		if (trade.open_close == OpenCloseType::CloseYesterday) {
-			rec.pre_quantity = trade.volume;
-		} else {
-			rec.today_quantity = trade.volume;
-		}
+		// new openings
+		HoldingRecord rec{.exchange = trade.exchange,
+						  .instrument_id = trade.instrument_id,
+						  .direction = trade.direction,
+						  .hedge_flag = trade.hedge_flag,
+						  .total_quantity = trade.volume,
+						  .today_quantity = trade.volume,
+						  .pre_quantity = 0};
 		holding_.emplace(index, rec);
 	}
 }
@@ -643,7 +679,6 @@ CThostFtdcInputOrderField CTPTradingAccount::NativeOrder2CTPOrder(const Order& o
 			field.TimeCondition = THOST_FTDC_TC_IOC;
 			field.VolumeCondition = THOST_FTDC_VC_CV;
 			break;
-		default: throw OrderInfoError(account_name_, "Unknown TimeInForce in order.");
 	}
 
 	field.OrderPriceType = kOrderPriceTypeTranslator.at(order.order_price_type);
@@ -750,4 +785,33 @@ void CTPTradingAccount::CancelOrder(OrderIndex index) {
 }
 void CTPTradingAccount::CancelAllPendingOrders() {
 	for (auto& pending_order : cancelable_orders_) { CancelOrder(pending_order); }
+}
+
+void CTPTradingAccount::TestQueryRequestsPerSecond() {
+	// assuming:
+	// 1. QueryInstruments can be done in less than a second.
+	// 2. commission rate querying can be done in less than a second.
+	QueryInstruments();
+	const auto& ticker_info = instrument_info_.cbegin()->second;
+	CThostFtdcQryInstrumentCommissionRateField a{};
+	strncpy(a.BrokerID, broker_id_.c_str(), sizeof(a.BrokerID));
+	strncpy(a.InvestorID, account_number_.c_str(), sizeof(a.InvestorID));
+	strncpy(a.InstrumentID, ticker_info.instrument_id.c_str(), sizeof(a.InstrumentID));
+
+	int count = 1;
+	bool looping = true;
+	while (looping) {
+		{
+			unique_lock lock(query_mutex_);
+			rate_throttler_.wait();
+			int rt = papi_->ReqQryInstrumentCommissionRate(&a, request_id_++);
+			if (rt == 0) {
+				++count;
+			} else {
+				looping = false;
+			}
+			query_cv_.wait_for(lock, 2s);
+		}
+	}
+	rate_throttler_ = RateThrottler<std::chrono::seconds>{count, std::chrono::seconds(1)};
 }

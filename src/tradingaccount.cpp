@@ -1,6 +1,6 @@
 ﻿#include "tradingaccount.h"
 
-using nlohmann::json, std::map, std::vector, std::string;
+using std::map, std::string;
 
 TradingAccount::TradingAccount(const AccountInfo& account_info)
 	: account_name_(account_info.account_name), broker_name_(account_info.broker_name),
@@ -8,6 +8,7 @@ TradingAccount::TradingAccount(const AccountInfo& account_info)
 	  id_(account_name_ + " - " + broker_name_) {}
 
 bool TradingAccount::is_logged_in() const { return connection_status_ == ConnectionStatus::Done; }
+
 map<string, int> TradingAccount::GetNetHoldings() const {
 	map<string, int> ret;
 	for (auto& [index, record] : holding_) {

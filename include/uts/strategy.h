@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <map>
 #include <string>
@@ -11,8 +11,8 @@
 // no capital management is implemented. assuming all capital in the account is used for the strategy.
 class Strategy : public Observer {
 public:
-	Strategy(std::string_view name) : name_(name){};
-	virtual ~Strategy() = default;
+	Strategy(std::string_view name) : name_(name) {}
+	virtual ~Strategy() override = default;
 
 	enum class AccountOrderPolicy {
 		Random,

@@ -309,10 +309,9 @@ struct BrokerInfo {
 	APIType API_type = APIType::CTP;		   ///< API类型
 	BrokerID broker_id;						   ///< 经纪商编码
 	std::vector<IPAddress> trade_server_addr;  ///< 交易服务器地址
-	UserProductInfo user_product_info;		   ///< UserProductInfo
+	UserProductInfo user_product_info = "";	   ///< UserProductInfo
 	AppID app_id;							   ///< 认证ID
 	AuthCode auth_code;						   ///< 认证码
-	int query_rate_per_second = 0;			   ///< 每秒查询限制
 };
 
 /// 合约基础信息
@@ -435,8 +434,7 @@ struct InstrumentCommissionRate {
 };
 
 template <typename T>
-requires std::is_same_v < std::underlying_type_t<T>,
-int > int EnumToPositiveOrNegative(T val) {
+requires std::is_same_v<std::underlying_type_t<T>, int> int EnumToPositiveOrNegative(T val) {
 	int mid = static_cast<int>(val);
 	if (mid > 0) {
 		return 1;

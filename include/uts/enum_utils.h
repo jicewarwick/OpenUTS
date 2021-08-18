@@ -127,7 +127,7 @@ NLOHMANN_JSON_SERIALIZE_ENUM(OrderStatus, {
 // json type conversion
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(AccountInfo, account_name, broker_name, account_number, password, enable)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(BrokerInfo, broker_name, API_type, broker_id, user_product_info, trade_server_addr,
-								   auth_code, app_id, query_rate_per_second)
+								   auth_code, app_id)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(MySQLConnectionInfo, addr, db_name, user_name, password)
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(InstrumentInfo, instrument_type, instrument_id, instrument_name, exchange,

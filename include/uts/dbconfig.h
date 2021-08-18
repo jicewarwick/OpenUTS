@@ -45,9 +45,13 @@ public:
 
 	// contracts
 	/**
-	 * @brief 获取最新的 `IF` 和 `IO` 合约
+	 * @brief 获取订阅合约列表
 	 */
-	std::vector<Ticker> CurrentIFIOTickers() const;
+	std::vector<Ticker> GetSubscriptionTickers() const;
+
+	std::map<BrokerName, BrokerInfo> GetBrokerInfo() const;
+	std::vector<AccountInfo> GetAccountInfo() const;
+	MySQLConnectionInfo GetMySQLConnectionInfo() const;
 
 private:
 	sqlite3* conn_ = nullptr;

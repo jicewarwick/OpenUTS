@@ -52,7 +52,7 @@ add_library(UnifiedTradingSystem unifiedtradingsystem.cpp)
 target_include_directories(UnifiedTradingSystem PRIVATE ${CMAKE_BINARY_DIR}/include/uts)
 target_link_libraries(
 	UnifiedTradingSystem
-	PUBLIC CTPAccount CTPMarketData
+	PUBLIC CTPAccount CTPMarketData DBConfig
 	PRIVATE TradingUtils spdlog::spdlog
 )
 

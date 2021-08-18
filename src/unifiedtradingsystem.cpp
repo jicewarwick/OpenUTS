@@ -95,6 +95,20 @@ void UnifiedTradingSystem::InitFromJsonConfig(json config) {
 	AddBroker(broker_info);
 	AddAccount(account_info);
 }
+/**
+ * @brief 通过 `UTSConfigDB` 完成初始化
+ *
+ * 可通过 `/src/generate_utsioo_config.py` 和 `config_example.xlsx` 生成适配文件
+ * 样本适配文件可在 `tests/test_files/sample_db.sqlite3` 中找到 `UTSConfigDB` 实例化.
+ * @param config UTSConfigDB
+ */
+void UnifiedTradingSystem::InitFromDBConfig(const UTSConfigDB& config) {
+	auto account_info = config.GetAccountInfo();
+	AddAccount(account_info);
+	broker_info_ = config.GetBrokerInfo();
+	vector<IPAddress> md_server = config.FartestCTPMDServers(5);
+	AddMarketDataSource(md_server);
+}
 
 void LogOnHelper(TradingAccount* account) {
 	if (!account->is_logged_in()) {
@@ -183,6 +197,7 @@ vector<Ticker> UnifiedTradingSystem::ListProducts(vector<ProductID> product_ids)
 	return ticker_list;
 }
 
+/// 订阅指定品种的所有合约
 void UnifiedTradingSystem::SubscribeProducts(const vector<ProductID>& product_ids) {
 	auto ticker_list = ListProducts(product_ids);
 	market_data_source_->Subscribe(ticker_list);
@@ -190,11 +205,7 @@ void UnifiedTradingSystem::SubscribeProducts(const vector<ProductID>& product_id
 
 /// 查询所有合约的手续费
 void UnifiedTradingSystem::QueryCommissionRate() {
-	auto query_func = [&](TradingAccount* account) {
-		for (auto& [instrument_index, instrument_info] : instrument_info_) {
-			account->QueryCommissionRate(instrument_info.instrument_id, instrument_info.instrument_type);
-		}
-	};
+	auto query_func = [&](TradingAccount* account) { account->QueryCommissionRate(); };
 	vector<std::jthread> thread_pool;
 	thread_pool.reserve(accounts_.size());
 	for (auto& [account_index, account] : accounts_) { thread_pool.emplace_back(query_func, account); }
@@ -208,7 +219,7 @@ map<Account, map<InstrumentIndex, HoldingRecord>> UnifiedTradingSystem::GetHoldi
 	}
 	return res;
 }
-/// 获取`account`的持仓
+/// 获取 `account` 的持仓
 map<InstrumentIndex, HoldingRecord> UnifiedTradingSystem::GetHolding(const Account& account) const {
 	TradingAccount* account_ptr = CheckAccount(account);
 	return account_ptr->holding();
@@ -221,7 +232,7 @@ map<Account, vector<TradingRecord>> UnifiedTradingSystem::GetTrades() const {
 	}
 	return res;
 }
-/// 获取`account`的成交
+/// 获取 `account` 的成交
 vector<TradingRecord> UnifiedTradingSystem::GetTrades(const Account& account) const {
 	TradingAccount* account_ptr = CheckAccount(account);
 	return account_ptr->trades();
@@ -234,7 +245,7 @@ map<Account, vector<OrderRecord>> UnifiedTradingSystem::GetOrders() const {
 	}
 	return res;
 }
-/// 获取`account`的委托
+/// 获取 `account` 的委托
 vector<OrderRecord> UnifiedTradingSystem::GetOrders(const Account& account) const {
 	TradingAccount* account_ptr = CheckAccount(account);
 	return MapValues(account_ptr->orders());
@@ -257,9 +268,7 @@ void UnifiedTradingSystem::DumpInfoJson(const std::filesystem::path& loc) const 
 
 	std::ofstream o(loc);
 	o << res.dump(4) << std::endl;
-	// TODO: C++20 format lib
 	spdlog::info("Current info logged to {}", loc.string());
-	// spdlog::info("Current info logged to {}", loc);
 }
 
 // Place order
@@ -424,7 +433,7 @@ vector<Order> UnifiedTradingSystem::ProcessAdvancedOrder(Order order) {
 
 	vector<Order> order_cache;
 	// 上期所、能源中心两个交易所系统都是上期所的交易系统，都有平今平昨指令，其它交易所均只有开仓、平仓指令。
-	bool close_yesterday_exchange = ((exchange == Exchange::SHF) | (exchange == Exchange::INE));
+	bool close_yesterday_exchange = (exchange == Exchange::SHF) || (exchange == Exchange::INE);
 	if (!close_yesterday_exchange && (order.open_close == OpenCloseType::CloseYesterday)) {
 		order.open_close = OpenCloseType::Close;
 	}
