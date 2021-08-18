@@ -17,33 +17,33 @@ using namespace nlohmann;
 using std::vector, std::map;
 
 TEST(UtilsTest, ReverseDirection) {
-	GTEST_ASSERT_EQ(ReverseDirection(Direction::Long), Direction::Short);
-	GTEST_ASSERT_EQ(ReverseDirection(Direction::Short), Direction::Long);
+	ASSERT_EQ(ReverseDirection(Direction::Long), Direction::Short);
+	ASSERT_EQ(ReverseDirection(Direction::Short), Direction::Long);
 }
 
 TEST(UtilsTest, StockIndexOptionYearMonth) {
-	GTEST_ASSERT_EQ(StockIndexOptionYearMonth("IO2106-C-4100"), "2106");
-	GTEST_ASSERT_EQ(StockIndexOptionYearMonth("IO2106-P-4100"), "2106");
+	ASSERT_EQ(StockIndexOptionYearMonth("IO2106-C-4100"), "2106");
+	ASSERT_EQ(StockIndexOptionYearMonth("IO2106-P-4100"), "2106");
 }
 
 TEST(UtilsTest, StockIndexOptionType) {
-	GTEST_ASSERT_EQ(StockIndexOptionType("IO2106-C-4100"), OptionType::Call);
-	GTEST_ASSERT_EQ(StockIndexOptionType("IO2106-P-4100"), OptionType::Put);
+	ASSERT_EQ(StockIndexOptionType("IO2106-C-4100"), OptionType::Call);
+	ASSERT_EQ(StockIndexOptionType("IO2106-P-4100"), OptionType::Put);
 }
 
 TEST(UtilsTest, StockIndexOptionStrike) {
-	GTEST_ASSERT_EQ(StockIndexOptionStrike("IO2106-C-4100"), 4100);
-	GTEST_ASSERT_EQ(StockIndexOptionStrike("IO2106-P-4100"), 4100);
+	ASSERT_EQ(StockIndexOptionStrike("IO2106-C-4100"), 4100);
+	ASSERT_EQ(StockIndexOptionStrike("IO2106-P-4100"), 4100);
 }
 
 TEST(UtilsTest, HashOptionTicker) {
-	GTEST_ASSERT_EQ(HashOptionTicker("IO2106-C-4100"), 21064100);
-	GTEST_ASSERT_EQ(HashOptionTicker("IO2106-P-4100"), 21064100);
+	ASSERT_EQ(HashOptionTicker("IO2106-C-4100"), 21064100);
+	ASSERT_EQ(HashOptionTicker("IO2106-P-4100"), 21064100);
 }
 
 TEST(UtilsTest, PutCallSwitchTest) {
-	GTEST_ASSERT_EQ(CallOptionToPutOption("IO2106-C-4100"), "IO2106-P-4100");
-	GTEST_ASSERT_EQ(PutOptionToCallOption("IO2106-P-4100"), "IO2106-C-4100");
+	ASSERT_EQ(CallOptionToPutOption("IO2106-C-4100"), "IO2106-P-4100");
+	ASSERT_EQ(PutOptionToCallOption("IO2106-P-4100"), "IO2106-C-4100");
 	ASSERT_THROW(CallOptionToPutOption("IO2106-P-4100"), std::runtime_error);
 	ASSERT_THROW(CallOptionToPutOption("IC2106-P-4100"), std::runtime_error);
 	ASSERT_THROW(PutOptionToCallOption("IP2106-C-4100"), std::runtime_error);
@@ -55,19 +55,23 @@ TEST(DBConfigTest, DBRuns) {
 	std::vector<IPAddress> t1 = conf.UnSpeedTestedCTPMDServers();
 	std::vector<IPAddress> t2 = conf.FartestCTPMDServers(1);
 	std::vector<Ticker> t3 = conf.GetSubscriptionTickers();
-	// GTEST_ASSERT_EQ(t1.size(), 0);
-	GTEST_ASSERT_EQ(t2.size(), 1);
-	// GTEST_ASSERT_GT(t3.size(), 10);
+	// ASSERT_EQ(t1.size(), 0);
+	ASSERT_EQ(t2.size(), 1);
+	// ASSERT_GT(t3.size(), 10);
 
 	std::map<BrokerName, BrokerInfo> broker_id_info = conf.GetBrokerInfo();
-	GTEST_ASSERT_EQ(broker_id_info.at("simnow").broker_id, "9999");
+	ASSERT_EQ(broker_id_info.at("simnow").broker_id, "9999");
 
 	std::vector<AccountInfo> account_info = conf.GetAccountInfo();
-	GTEST_ASSERT_EQ(account_info[0].account_name, "simnow_test");
+	ASSERT_EQ(account_info[0].account_name, "simnow_test");
 
 	MySQLConnectionInfo conn_info = conf.GetMySQLConnectionInfo();
-	GTEST_ASSERT_EQ(conn_info.addr, "127.0.0.1");
-	GTEST_ASSERT_EQ(conn_info.db_name, "asharedata");
+	ASSERT_EQ(conn_info.addr, "127.0.0.1");
+	ASSERT_EQ(conn_info.db_name, "asharedata");
+
+	std::set<Ticker> tickers = conf.GetNoCloseTodayContracts();
+	ASSERT_EQ(tickers.size(), 1);
+	ASSERT_TRUE(tickers.contains("AP110"));
 }
 
 TEST(JsonTest, FileNotExist) {

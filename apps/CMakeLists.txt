@@ -61,4 +61,4 @@ if(${MARIADBCPP_FOUND})
 	install(TARGETS CTPTickMySQLRecorder EXPORT ${PROJECT_NAME}Targets)
 endif()
 
-install(FILES generate_uts_config.py dump_current_if_io_contracts.py DESTINATION bin)
+install(FILES parse_broker_file.py DESTINATION bin)

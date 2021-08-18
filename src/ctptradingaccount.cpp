@@ -561,7 +561,7 @@ void CTPTradingAccount::OnRtnTrade(CThostFtdcTradeField* pTrade) {
 			}
 			case OpenCloseType::CloseYesterday: {
 				// 上期所、能源中心的平今仓按今仓先开先平顺序对持仓明细进行平仓处理，平仓指令按昨仓先开先平顺序对持仓明细进行平仓处理。
-				loc.pre_quantity += trade.volume;
+				loc.pre_quantity -= trade.volume;
 				break;
 			}
 			case OpenCloseType::Close: {
@@ -574,10 +574,9 @@ void CTPTradingAccount::OnRtnTrade(CThostFtdcTradeField* pTrade) {
 						break;
 					}
 					case Exchange::CFE:
-						// 中金所，先开先平。
 						[[fallthrough]];
 					case Exchange::CZC: {
-						// 郑商所，先开先平。
+						// 中金所，郑商所: 先开先平。
 						Volume vol = std::max(loc.pre_quantity, trade.volume);
 						loc.pre_quantity -= vol;
 						loc.today_quantity -= (trade.volume - vol);

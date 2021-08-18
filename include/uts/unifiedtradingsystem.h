@@ -36,9 +36,13 @@ public:
 	void AddAccount(const std::vector<AccountInfo>& accounts_info);
 	void AddAccount(const AccountInfo& account_info);
 
+	/// 添加行情源信息
 	void AddMarketDataSource(const std::vector<IPAddress>& server_addr);
 
-	void InitFromJsonConfig(nlohmann::json config);
+	/// 设置不平今合约
+	void setNoCloseTodayTickers(const std::set<Ticker>& no_close_today_tickers);
+
+	[[deprecated]] void InitFromJsonConfig(nlohmann::json config);
 	void InitFromDBConfig(const UTSConfigDB& config);
 
 	/**
@@ -99,8 +103,7 @@ private:
 	std::map<Ticker, InstrumentInfo> instrument_info_;
 	MarketDataSource* market_data_source_ = nullptr;
 	std::map<Ticker, MarketDepth>* market_data_ = nullptr;
-
-	std::map<Ticker, bool> close_today_cache_;
+	std::set<Ticker> no_close_today_tickers_;
 
 	// helper func
 	TradingAccount* CheckAccount(const Account&) const;

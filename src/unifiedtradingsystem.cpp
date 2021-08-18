@@ -43,7 +43,6 @@ void UnifiedTradingSystem::AddBroker(const BrokerInfo& broker_info) {
 	broker_info_[broker_info.broker_name] = broker_info;
 }
 
-/// 添加行情源信息
 void UnifiedTradingSystem::AddMarketDataSource(const vector<IPAddress>& server_addr) {
 	market_data_source_ = new CTPMarketData(server_addr);
 	market_data_ = &market_data_source_->market_data();
@@ -79,6 +78,9 @@ void UnifiedTradingSystem::AddAccount(const std::vector<AccountInfo>& accounts_i
 	for (auto& account : accounts_info) AddAccount(account);
 }
 
+void UnifiedTradingSystem::setNoCloseTodayTickers(const std::set<Ticker>& no_close_today_tickers) {
+	no_close_today_tickers_ = no_close_today_tickers;
+}
 /**
  * @brief 通过Json文件初始化
  *
@@ -108,6 +110,7 @@ void UnifiedTradingSystem::InitFromDBConfig(const UTSConfigDB& config) {
 	broker_info_ = config.GetBrokerInfo();
 	vector<IPAddress> md_server = config.FartestCTPMDServers(5);
 	AddMarketDataSource(md_server);
+	setNoCloseTodayTickers(config.GetNoCloseTodayContracts());
 }
 
 void LogOnHelper(TradingAccount* account) {
@@ -299,10 +302,6 @@ void UnifiedTradingSystem::CancelOrder(Account account, OrderIndex index) {
 	account_ptr->CancelOrder(index);
 }
 
-inline bool IfCloseToday(InstrumentCommissionRate rate) {
-	return (rate.close_today_ratio_by_money + rate.close_today_ratio_by_volume <=
-			rate.close_ratio_by_money + rate.close_ratio_by_volume);
-}
 inline bool isMultipleOfTicks(double price, double tick) {
 	double div = price / tick;
 	return (std::abs(std::round(div) - div) <= 0.0001);
@@ -474,65 +473,54 @@ vector<Order> UnifiedTradingSystem::ProcessAdvancedOrder(Order order) {
 				break;
 			}
 
+			HoldingRecord& holding_rec = holding_loc->second;
+
 			// optimize closing positions
-			// 对于不区分平今平昨的交易所
 			Volume volume_left = order.volume;
-			if (!close_yesterday_exchange) {
-				Volume close_quantity = std::max(order.volume, holding_loc->second.today_quantity);
-				order.open_close = OpenCloseType::Close;
-				order.volume = close_quantity;
-				order_cache.push_back(order);
-				volume_left -= close_quantity;
+			Volume close_today_vol = 0, close_pre_vol = 0;
+			if (no_close_today_tickers_.contains(order.instrument_id)) {
+				// 大连，如果当日有开仓，则先平今再平昨。所以有今仓则不平仓。其他情况平昨处理
+				if (!((order.exchange == Exchange::DCE) && (holding_rec.today_quantity > 0))) {
+					close_pre_vol = std::max(volume_left, holding_rec.pre_quantity);
+					volume_left -= close_pre_vol;
+				}
+			} else {
+				close_today_vol = std::max(volume_left, holding_rec.today_quantity);
+				volume_left -= close_today_vol;
 
 				if (volume_left > 0) {
-					order.open_close = OpenCloseType::Open;
-					order.volume = volume_left;
+					close_pre_vol = std::max(volume_left, holding_rec.pre_quantity);
+					volume_left -= close_pre_vol;
+				}
+			}
+
+			if (close_yesterday_exchange) {
+				// 区分平今平昨的交易所
+				if (close_pre_vol > 0) {
+					order.open_close = OpenCloseType::CloseYesterday;
+					order.volume = close_pre_vol;
 					order_cache.push_back(order);
 				}
-				break;
-			}
-
-			bool close_today = false;
-			bool close_yesterday = true;
-			if (holding_loc->second.today_quantity != 0) {
-				switch (instrument_info_.at(instrument_id).instrument_type) {
-					case InstrumentType::Option: close_today = true; break;
-					case InstrumentType::Future:
-						if (close_today_cache_.contains(instrument_id)) {
-							close_today = close_today_cache_.at(instrument_id);
-						} else {
-							InstrumentCommissionRate commission_info;
-							commission_info = account->QueryCommissionRate(instrument_id, InstrumentType::Future);
-							close_today = IfCloseToday(commission_info);
-							close_today_cache_.emplace(instrument_id, close_today);
-						}
-						break;
-					default: break;
+				if (close_today_vol > 0) {
+					order.open_close = OpenCloseType::CloseToday;
+					order.volume = close_today_vol;
+					order_cache.push_back(order);
+				}
+			} else {
+				// 不区分平今平昨的交易所
+				Volume close_quantity = close_today_vol + close_pre_vol;
+				if (close_quantity > 0) {
+					order.open_close = OpenCloseType::Close;
+					order.volume = close_quantity;
+					order_cache.push_back(order);
 				}
 			}
 
-			Volume close_today_volume = close_today ? std::min(volume_left, holding_loc->second.today_quantity) : 0;
-			if (close_today_volume != 0) {
-				order.open_close = OpenCloseType::CloseToday;
-				order.volume = close_today_volume;
-				order_cache.push_back(order);
-				volume_left -= close_today_volume;
-			}
-
-			Volume close_pre_volume = close_yesterday ? std::min(volume_left, holding_loc->second.pre_quantity) : 0;
-			if (close_pre_volume != 0) {
-				order.open_close = OpenCloseType::Close;
-				order.volume = close_pre_volume;
-				order_cache.push_back(order);
-				volume_left -= close_pre_volume;
-			}
-
-			if (volume_left != 0) {
+			if (volume_left > 0) {
 				order.open_close = OpenCloseType::Open;
 				order.volume = volume_left;
 				order_cache.push_back(order);
 			}
-
 			break;
 		}
 		default: throw OrderInfoError(id, fmt::format("Wrong Order Type - {}", order.open_close));

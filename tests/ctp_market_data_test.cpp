@@ -32,7 +32,7 @@ CTPMarketData* CTPMarketDataTest::md_ = nullptr;
 TEST_F(CTPMarketDataTest, MarketDataSubscribeTest) {
 	std::vector<Ticker> test_products{"ag2009", "AP012", "c2009", "IC2009"};
 	md_->Subscribe(test_products);
-	GTEST_ASSERT_EQ(md_->subscribed_tickers().size(), 4);
+	ASSERT_EQ(md_->subscribed_tickers().size(), 4);
 }
 
 int main(int argc, char** argv) {

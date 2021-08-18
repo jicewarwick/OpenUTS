@@ -24,7 +24,8 @@ UTSConfigDB::UTSConfigDB(const std::filesystem::path& db_name) {
 		"broker_id TEXT, AppID TEXT, AuthCode TEXT);"
 		"CREATE TABLE IF NOT EXISTS ctp_account(index INTEGER, account_name TEXT, broker_name TEXT, account_number "
 		"TEXT, password TEXT, enable INTEGER);"
-		"CREATE TABLE mysql_connection_info(addr TEXT, db_name TEXT, user_name TEXT, password TEXT);";
+		"CREATE TABLE mysql_connection_info(addr TEXT, db_name TEXT, user_name TEXT, password TEXT);"
+		"CREATE TABLE no_close_today_tickers(index INTEGER, ticker TEXT);";
 
 	sqlite3_exec(conn_, init_query, nullptr, nullptr, nullptr);
 }
@@ -69,10 +70,23 @@ void UTSConfigDB::AppendSpeedTestResult(const IPAddress& addr, std::chrono::mill
 	sqlite3_exec(conn_, query.c_str(), nullptr, nullptr, nullptr);
 }
 
+auto list_one_col_set_func = [](void* closure, int, char** argv, char**) -> int {
+	auto dummy = reinterpret_cast<std::set<string>*>(closure);
+	dummy->insert(argv[0]);
+	return 0;
+};
+
 vector<Ticker> UTSConfigDB::GetSubscriptionTickers() const {
 	vector<Ticker> ret;
 	const char* query = "SELECT ticker FROM subscribe_contracts;";
 	sqlite3_exec(conn_, query, list_one_col_func, &ret, nullptr);
+	return ret;
+}
+
+std::set<Ticker> UTSConfigDB::GetNoCloseTodayContracts() const {
+	std::set<Ticker> ret;
+	const char* query = "SELECT ticker FROM no_close_today_tickers;";
+	sqlite3_exec(conn_, query, list_one_col_set_func, &ret, nullptr);
 	return ret;
 }
 
@@ -150,5 +164,6 @@ MySQLConnectionInfo UTSConfigDB::GetMySQLConnectionInfo() const {
 	MySQLConnectionInfo info;
 	const char* query = "SELECT addr, db_name, user_name, password FROM mysql_connection_info;";
 	sqlite3_exec(conn_, query, mysql_info_func, &info, nullptr);
+	if (info.addr.empty()) { throw DBFileError("mysql_connection_info in config db is empty"); }
 	return info;
 }

@@ -5,6 +5,7 @@
 #include <chrono>
 #include <filesystem>
 #include <vector>
+#include <set>
 
 #include <uts/data_struct.h>
 
@@ -43,14 +44,16 @@ public:
 	void AppendSpeedTestResult(const IPAddress& addr, std::chrono::milliseconds ms);
 	// std::vector<IPAddress> CTPMDServers();
 
-	// contracts
-	/**
-	 * @brief 获取订阅合约列表
-	 */
+	/// 获取订阅合约列表
 	std::vector<Ticker> GetSubscriptionTickers() const;
+	/// 获取不平今合约列表
+	std::set<Ticker> GetNoCloseTodayContracts() const;
 
+	/// 获取经纪商信息
 	std::map<BrokerName, BrokerInfo> GetBrokerInfo() const;
+	/// 获取交易账户
 	std::vector<AccountInfo> GetAccountInfo() const;
+	/// 获取MySQL数据库登录信息
 	MySQLConnectionInfo GetMySQLConnectionInfo() const;
 
 private:
