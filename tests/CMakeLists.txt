@@ -24,6 +24,7 @@ gtest_discover_tests(TradingSystemTest)
 add_executable(DataRecorderTest data_recorder_test.cpp)
 target_link_libraries(DataRecorderTest PRIVATE SQLite3DataRecorder CSVDataRecorder MariadbDataRecorder GTest::GTest)
 gtest_discover_tests(DataRecorderTest)
+
 file(
 	COPY test_files
 	DESTINATION ${CMAKE_CURRENT_BINARY_DIR}

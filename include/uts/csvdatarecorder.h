@@ -15,7 +15,7 @@ public:
 	 * @param filename csv 文件名称
 	 */
 	CSVDataRecorder(const std::filesystem::path& filename);
-	~CSVDataRecorder() = default;
+	~CSVDataRecorder() override = default;
 
 protected:
 	void WriteDB(const MarketDepth& data) override;
