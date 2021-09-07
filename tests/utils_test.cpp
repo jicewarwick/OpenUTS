@@ -64,6 +64,9 @@ TEST(DBConfigTest, DBRuns) {
 
 	std::vector<AccountInfo> account_info = conf.GetAccountInfo();
 	ASSERT_EQ(account_info[0].account_name, "simnow_test");
+	ASSERT_EQ(account_info[1].account_name, "simnow_test1");
+	ASSERT_TRUE(account_info[0].enable);
+	ASSERT_FALSE(account_info[1].enable);
 
 	MySQLConnectionInfo conn_info = conf.GetMySQLConnectionInfo();
 	ASSERT_EQ(conn_info.addr, "127.0.0.1");

@@ -409,9 +409,9 @@ InstrumentCommissionRate CTPTradingAccount::QueryCommissionRate(const Ticker& ti
 void CTPTradingAccount::OnRspQryInstrumentCommissionRate(
 	CThostFtdcInstrumentCommissionRateField* pInstrumentCommissionRate, CThostFtdcRspInfoField*, int, bool bIsLast) {
 	if (pInstrumentCommissionRate) {
-		string id = pInstrumentCommissionRate->InstrumentID;
+		string ticker = pInstrumentCommissionRate->InstrumentID;
 		InstrumentCommissionRate rate{
-			.instrument_id = id,
+			.instrument_id = ticker,
 			.open_ratio_by_money = pInstrumentCommissionRate->OpenRatioByMoney,
 			.open_ratio_by_volume = pInstrumentCommissionRate->OpenRatioByVolume,
 			.close_ratio_by_money = pInstrumentCommissionRate->CloseRatioByMoney,
@@ -419,17 +419,17 @@ void CTPTradingAccount::OnRspQryInstrumentCommissionRate(
 			.close_today_ratio_by_money = pInstrumentCommissionRate->CloseTodayRatioByMoney,
 			.close_today_ratio_by_volume = pInstrumentCommissionRate->CloseTodayRatioByVolume,
 		};
-		instrument_commission_rate_.insert({id, std::move(rate)});
-		spdlog::trace("CTPTS: {}'s commission rate info received.", id);
+		instrument_commission_rate_.insert({ticker, std::move(rate)});
+		spdlog::info("CTPTS: {} - {}'s commission rate info received.", id_, ticker);
 	}
 	if (bIsLast) { query_cv_.notify_one(); }
 }
 void CTPTradingAccount::OnRspQryOptionInstrCommRate(CThostFtdcOptionInstrCommRateField* pOptionInstrCommRate,
 													CThostFtdcRspInfoField*, int, bool bIsLast) {
 	if (pOptionInstrCommRate) {
-		string id = pOptionInstrCommRate->InstrumentID;
+		string ticker = pOptionInstrCommRate->InstrumentID;
 		InstrumentCommissionRate rate{
-			.instrument_id = id,
+			.instrument_id = ticker,
 			.open_ratio_by_money = pOptionInstrCommRate->OpenRatioByMoney,
 			.open_ratio_by_volume = pOptionInstrCommRate->OpenRatioByVolume,
 			.close_ratio_by_money = pOptionInstrCommRate->CloseRatioByMoney,
@@ -437,8 +437,8 @@ void CTPTradingAccount::OnRspQryOptionInstrCommRate(CThostFtdcOptionInstrCommRat
 			.close_today_ratio_by_money = pOptionInstrCommRate->CloseTodayRatioByMoney,
 			.close_today_ratio_by_volume = pOptionInstrCommRate->CloseTodayRatioByVolume,
 		};
-		instrument_commission_rate_.insert({id, std::move(rate)});
-		spdlog::trace("CTPTS: {}'s commission rate info received.", id);
+		instrument_commission_rate_.insert({ticker, std::move(rate)});
+		spdlog::info("CTPTS: {} - {}'s commission rate info received.", id_, ticker);
 	}
 	if (bIsLast) { query_cv_.notify_one(); }
 }
@@ -573,8 +573,7 @@ void CTPTradingAccount::OnRtnTrade(CThostFtdcTradeField* pTrade) {
 						loc.pre_quantity -= (trade.volume - vol);
 						break;
 					}
-					case Exchange::CFE:
-						[[fallthrough]];
+					case Exchange::CFE: [[fallthrough]];
 					case Exchange::CZC: {
 						// 中金所，郑商所: 先开先平。
 						Volume vol = std::max(loc.pre_quantity, trade.volume);
@@ -787,7 +786,7 @@ void CTPTradingAccount::CancelAllPendingOrders() {
 }
 
 void CTPTradingAccount::TestQueryRequestsPerSecond() {
-	// assuming:
+	// Assuming:
 	// 1. QueryInstruments can be done in less than a second.
 	// 2. commission rate querying can be done in less than a second.
 	QueryInstruments();
@@ -797,8 +796,11 @@ void CTPTradingAccount::TestQueryRequestsPerSecond() {
 	strncpy(a.InvestorID, account_number_.c_str(), sizeof(a.InvestorID));
 	strncpy(a.InstrumentID, ticker_info.instrument_id.c_str(), sizeof(a.InstrumentID));
 
-	int count = 1;
+	int count = 0;
 	bool looping = true;
+	spdlog::info("CTP: {} - start finding query rates.", id_);
+	rate_throttler_ = RateThrottler<std::chrono::seconds>{0, std::chrono::seconds(1)};
+	std::this_thread::sleep_for(1s);
 	while (looping) {
 		{
 			unique_lock lock(query_mutex_);
@@ -809,8 +811,10 @@ void CTPTradingAccount::TestQueryRequestsPerSecond() {
 			} else {
 				looping = false;
 			}
-			query_cv_.wait_for(lock, 2s);
+			query_cv_.wait_for(lock, 1s);
 		}
 	}
+	spdlog::info("CTP: {} - query rates: {} per second.", id_, count);
 	rate_throttler_ = RateThrottler<std::chrono::seconds>{count, std::chrono::seconds(1)};
+	std::this_thread::sleep_for(1s);
 }

@@ -75,6 +75,20 @@ public:
 	DBFileError(const std::string& msg) { msg_ = msg; }
 };
 
+/// 登录信息不完整错误
+class IncompleteLoginInfoError : public LoginError {
+public:
+	IncompleteLoginInfoError() = default;
+};
+
+/// 登录信息不完整错误
+class IncompleteBrokerInfoError : public IncompleteLoginInfoError {
+public:
+	IncompleteBrokerInfoError(const BrokerName& broker_name) {
+		msg_ = "Could not find server info for " + broker_name + ".";
+	}
+};
+
 /// 未知登录失败错误
 class UnknownLoginError : public LoginError {
 public:

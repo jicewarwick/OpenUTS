@@ -28,20 +28,16 @@ gtest_discover_tests(DataRecorderTest)
 file(
 	COPY test_files
 	DESTINATION ${CMAKE_CURRENT_BINARY_DIR}
-	FILES_MATCHING
-	PATTERN "*.json,*.sqlite3"
 )
 
 if(INSTALL_TESTING)
 	install(
 		DIRECTORY test_files/
 		DESTINATION ${CMAKE_INSTALL_PREFIX}/testing
-		FILES_MATCHING
-		PATTERN "*.json,*.sqlite3"
 	)
 
 	install(
-		TARGETS JsonTest CTPMarketDataTest CTPAccountTest TradingSystemTest DataRecorderTest
+		TARGETS UtilsTest CTPMarketDataTest CTPAccountTest TradingSystemTest DataRecorderTest
 		ARCHIVE DESTINATION lib
 		LIBRARY DESTINATION lib
 		RUNTIME DESTINATION bin

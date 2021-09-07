@@ -55,8 +55,12 @@ void UnifiedTradingSystem::AddMarketDataSource(const vector<IPAddress>& server_a
  */
 void UnifiedTradingSystem::AddAccount(const AccountInfo& account_info) {
 	if (!account_info.enable) { return; }
+	if (!broker_info_.contains(account_info.broker_name)) {
+		spdlog::error("{}'s server info could not be found.", account_info.broker_name);
+		throw IncompleteBrokerInfoError(account_info.broker_name);
+	}
 
-	BrokerInfo& broker = broker_info_[account_info.broker_name];
+	BrokerInfo& broker = broker_info_.at(account_info.broker_name);
 	switch (broker.API_type) {
 		case APIType::CTP:
 			try {
@@ -105,9 +109,9 @@ void UnifiedTradingSystem::InitFromJsonConfig(json config) {
  * @param config UTSConfigDB
  */
 void UnifiedTradingSystem::InitFromDBConfig(const UTSConfigDB& config) {
+	broker_info_ = config.GetBrokerInfo();
 	auto account_info = config.GetAccountInfo();
 	AddAccount(account_info);
-	broker_info_ = config.GetBrokerInfo();
 	vector<IPAddress> md_server = config.FartestCTPMDServers(5);
 	AddMarketDataSource(md_server);
 	setNoCloseTodayTickers(config.GetNoCloseTodayContracts());

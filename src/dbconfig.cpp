@@ -131,7 +131,7 @@ auto account_info_map_func = [](void* closure, int, char** argv, char**) -> int 
 		.broker_name = argv[1],
 		.account_number = argv[2],
 		.password = argv[3],
-		.enable = static_cast<bool>(argv[4]),
+		.enable = static_cast<bool>(atoi(argv[4])),
 	};
 
 	auto dummy = reinterpret_cast<vector<AccountInfo>*>(closure);
