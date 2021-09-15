@@ -103,7 +103,10 @@ void CTPTradingAccount::LogOnSync() {
 	QueryPreHolding();
 	auto query_func = [this]() {
 		while (true) {
-			if (connection_status_ == ConnectionStatus::LoggedOut) { return; }
+			if (connection_status_ == ConnectionStatus::LoggingOut ||
+				connection_status_ == ConnectionStatus::LoggedOut) {
+				return;
+			}
 			QueryCapitalSync();
 			unique_lock lock(log_on_cv_mutex_);
 			log_on_cv_.wait_for(lock, 60s);
@@ -281,8 +284,7 @@ bool CTPTradingAccount::UpdatePassword(const Password& new_password) {
 void CTPTradingAccount::OnRspUserPasswordUpdate(CThostFtdcUserPasswordUpdateField* pUserPasswordUpdate,
 												CThostFtdcRspInfoField* pRspInfo, int, bool) {
 	if (pRspInfo->ErrorID == 0) {
-		spdlog::info("CTPTS: {} password change successful. old password: '{}', new password: '{}'", id_,
-					 pUserPasswordUpdate->OldPassword, pUserPasswordUpdate->NewPassword);
+		spdlog::info("CTPTS: {} password change successful.", id_);
 		success_ = true;
 	} else {
 		ErrorResponse(pRspInfo);

@@ -58,6 +58,7 @@ public:
 	std::map<InstrumentIndex, HoldingRecord> GetHolding(const Account& account) const;
 	std::vector<TradingRecord> GetTrades(const Account& account) const;
 	std::vector<OrderRecord> GetOrders(const Account& account) const;
+
 	// login and logout
 	void LogOn();
 	void LogOn(const Account&);

@@ -17,7 +17,7 @@ int main(int argc, char* argv[]) {
 
 	CLI::App app{"Deamon that logs multiple ctp account info which includes capital, holdings, trades, orders, etc."};
 	app.add_option("-c,--config", config_file, "UTS config db location")->required()->check(CLI::ExistingFile);
-	app.add_option("-n,--interval", interval, "interval in seconds to dump info to file");
+	app.add_option("-n,--interval", interval, "Interval in seconds to dump info to file");
 	CLI11_PARSE(app, argc, argv)
 
 	UTSConfigDB db(config_file);

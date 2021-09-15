@@ -8,6 +8,10 @@ find_package(CLI11 REQUIRED)
 add_executable(CTPQueyer ctpqueryer.cpp)
 target_link_libraries(CTPQueyer PRIVATE UnifiedTradingSystem TradingUtils CLI11::CLI11 spdlog::spdlog)
 
+# CTPQueryer
+add_executable(PasswordChanger password_changer.cpp)
+target_link_libraries(PasswordChanger PRIVATE UnifiedTradingSystem CLI11::CLI11 spdlog::spdlog)
+
 # CTPCommissionRateQueyer
 add_executable(CTPCommissionRateQueyer ctpcommissionratequeryer.cpp)
 target_link_libraries(
@@ -49,14 +53,8 @@ target_link_libraries(
 							  spdlog::spdlog
 )
 
-if(MSVC)
-	target_compile_definitions(CTPQueyer PRIVATE _CRT_SECURE_NO_WARNINGS)
-	target_compile_definitions(CTPTickSQLiteRecorder PRIVATE _CRT_SECURE_NO_WARNINGS)
-	target_compile_definitions(CTPTickMySQLRecorder PRIVATE _CRT_SECURE_NO_WARNINGS)
-endif()
-
 # installation
-install(TARGETS CTPQueyer CTPCommissionRateQueyer CTPTickSQLiteRecorder SeeThroughTesting EXPORT ${PROJECT_NAME}Targets)
+install(TARGETS CTPQueyer PasswordChanger CTPCommissionRateQueyer CTPTickSQLiteRecorder SeeThroughTesting EXPORT ${PROJECT_NAME}Targets)
 if(${MARIADBCPP_FOUND})
 	install(TARGETS CTPTickMySQLRecorder EXPORT ${PROJECT_NAME}Targets)
 endif()
