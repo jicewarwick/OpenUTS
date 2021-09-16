@@ -25,16 +25,10 @@ add_executable(DataRecorderTest data_recorder_test.cpp)
 target_link_libraries(DataRecorderTest PRIVATE SQLite3DataRecorder CSVDataRecorder MariadbDataRecorder GTest::GTest)
 gtest_discover_tests(DataRecorderTest)
 
-file(
-	COPY test_files
-	DESTINATION ${CMAKE_CURRENT_BINARY_DIR}
-)
+file(COPY test_files DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
 if(INSTALL_TESTING)
-	install(
-		DIRECTORY test_files/
-		DESTINATION ${CMAKE_INSTALL_PREFIX}/testing
-	)
+	install(DIRECTORY test_files/ DESTINATION ${CMAKE_INSTALL_PREFIX}/testing)
 
 	install(
 		TARGETS UtilsTest CTPMarketDataTest CTPAccountTest TradingSystemTest DataRecorderTest

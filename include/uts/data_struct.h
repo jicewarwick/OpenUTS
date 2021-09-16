@@ -434,7 +434,7 @@ struct InstrumentCommissionRate {
 };
 
 template <typename T>
-requires std::is_same_v<std::underlying_type_t<T>, int> int EnumToPositiveOrNegative(T val) {
+int EnumToPositiveOrNegative(T val) requires(std::is_same_v<std::underlying_type_t<T>, int>) {
 	int mid = static_cast<int>(val);
 	if (mid > 0) {
 		return 1;

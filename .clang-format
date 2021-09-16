@@ -21,7 +21,7 @@ AlwaysBreakAfterDefinitionReturnType: None
 AlwaysBreakAfterReturnType: None
 AlwaysBreakBeforeMultilineStrings: true
 AlwaysBreakTemplateDeclarations: Yes
-# BinPackArguments: true
+BinPackArguments: true
 BinPackParameters: true
 BraceWrapping:
   AfterCaseLabel:  false
@@ -42,7 +42,7 @@ BraceWrapping:
   SplitEmptyNamespace: true
 BreakBeforeBinaryOperators: None
 BreakBeforeBraces: Attach
-# BreakBeforeConceptDeclarations: true
+BreakBeforeConceptDeclarations: true
 BreakBeforeInheritanceComma: false
 BreakInheritanceList: BeforeColon
 AlwaysBreakTemplateDeclarations: true
@@ -73,7 +73,12 @@ IncludeCategories:
   - Regex:           '^<[^\/]*\.h>'
     Priority:        1
     SortPriority:    0
-# c++ header
+# c++ std header
+  - Regex:           '^<[a-z_]*>'
+    Priority:        1
+    SortPriority:    0
+    CaseSensitive:   true
+# framework library, eg. Qt
   - Regex:           '^<[^\/\.]*>'
     Priority:        2
     SortPriority:    0
@@ -91,7 +96,7 @@ IndentCaseLabels: true
 IndentCaseBlocks: false
 IndentGotoLabels: true
 IndentPPDirectives: BeforeHash
-# IndentRequires: false
+IndentRequires: false
 IndentWidth:     4
 IndentWrappedFunctionNames: true
 # InsertTrailingCommas: Wrapped

@@ -1,11 +1,10 @@
 ﻿#pragma once
 
-#include <sqlite3.h>
-
 #include <chrono>
 #include <filesystem>
-#include <vector>
 #include <set>
+#include <sqlite3.h>
+#include <vector>
 
 #include <uts/data_struct.h>
 

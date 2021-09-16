@@ -54,7 +54,9 @@ target_link_libraries(
 )
 
 # installation
-install(TARGETS CTPQueyer PasswordChanger CTPCommissionRateQueyer CTPTickSQLiteRecorder SeeThroughTesting EXPORT ${PROJECT_NAME}Targets)
+install(TARGETS CTPQueyer PasswordChanger CTPCommissionRateQueyer CTPTickSQLiteRecorder SeeThroughTesting
+		EXPORT ${PROJECT_NAME}Targets
+)
 if(${MARIADBCPP_FOUND})
 	install(TARGETS CTPTickMySQLRecorder EXPORT ${PROJECT_NAME}Targets)
 endif()

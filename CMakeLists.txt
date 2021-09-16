@@ -8,7 +8,7 @@ project(
 )
 
 # compiler settings
-set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
@@ -55,7 +55,9 @@ install(
 )
 
 include(CMakePackageConfigHelpers)
-configure_package_config_file(Config.cmake.in ${PROJECT_NAME}Config.cmake INSTALL_DESTINATION lib/cmake/${PROJECT_NAME})
+configure_package_config_file(
+	./cmake/Config.cmake.in ${PROJECT_NAME}Config.cmake INSTALL_DESTINATION lib/cmake/${PROJECT_NAME}
+)
 write_basic_package_version_file(${PROJECT_NAME}ConfigVersion.cmake COMPATIBILITY AnyNewerVersion)
 
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
@@ -83,7 +85,7 @@ endif(DOXYGEN_FOUND)
 
 # CPack
 set(CPACK_PACKAGE_VENDOR "Ce Ji")
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "UnifiedTradingSystem")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY ${PROJECT_DESCRIPTION})
 set(CPACK_PACKAGE_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
 set(CPACK_PACKAGE_VERSION_MINOR ${PROJECT_VERSION_MINOR})
 set(CPACK_PACKAGE_VERSION_PATCH ${PROJECT_VERSION_PATCH})
@@ -91,6 +93,6 @@ set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
 set(CPACK_RESOURCE_FILE_README "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
 
 set(CPACK_SOURCE_GENERATOR "TGZ;ZIP")
-set(CPACK_SOURCE_IGNORE_FILES /.git .idea/ .vs/ CMakeLists.txt.* CMakeSettings.json ./build/)
+set(CPACK_SOURCE_IGNORE_FILES /.git .idea/ .vs/ CMakeLists.txt.* CMakeSettings.json)
 
 include(CPack)
