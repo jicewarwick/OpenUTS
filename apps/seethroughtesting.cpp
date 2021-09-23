@@ -48,8 +48,6 @@ int main(int argc, char* argv[]) {
 	auto orders = GenerateRandomOrders(account_name, broker_name, tickers, 3);
 
 	for (const auto& order : orders) { uts.PlaceAdvancedOrderSync(order); }
-	// TradingAccount* handle = uts.GetHandle(account);
-	// handle->BatchOrderSync(orders);
 
 	std::this_thread::sleep_for(std::chrono::seconds(5));
 	uts.ClearAllHodlings(account);
