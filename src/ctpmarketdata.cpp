@@ -43,20 +43,8 @@ CTPMarketDataBase::~CTPMarketDataBase() {
  * @exception LoginError 登录失败
  */
 void CTPMarketDataBase::LogIn() {
-	md_api_ = CThostFtdcMdApi::CreateFtdcMdApi(cache_path_.string().c_str());
-	md_api_->RegisterSpi(this);
-	for (IPAddress& addr : server_addr_) {
-		if (addr.substr(4, 2) != "//") { addr = "tcp://" + addr; }
-		md_api_->RegisterFront(const_cast<char*>(addr.c_str()));
-	}
-
-	cv_status cv_status;
-	{
-		unique_lock lock(query_mutex_);
-		md_api_->Init();
-		cv_status = cv_.wait_for(lock, 5s);
-	}
-	if (cv_status == std::cv_status::timeout) {
+	QueryCondition c = log_in_query_manager_.query();
+	if (c == QueryCondition::Timeout) {
 		throw NetworkError("Market info");
 	} else if (status_ == ConnectionStatus::Connected) {
 		spdlog::info("CTPM: CTP market data server login successful.");
@@ -64,6 +52,15 @@ void CTPMarketDataBase::LogIn() {
 		spdlog::info("CTPM: Failed to log in CTP market data server.");
 		throw LoginError();
 	}
+}
+void CTPMarketDataBase::LogOnASync() noexcept {
+	md_api_ = CThostFtdcMdApi::CreateFtdcMdApi(cache_path_.string().c_str());
+	md_api_->RegisterSpi(this);
+	for (IPAddress& addr : server_addr_) {
+		if (addr.substr(4, 2) != "//") { addr = "tcp://" + addr; }
+		md_api_->RegisterFront(const_cast<char*>(addr.c_str()));
+	}
+	md_api_->Init();
 }
 void CTPMarketDataBase::OnFrontConnected() {
 	CThostFtdcReqUserLoginField reqUserLogin{};
@@ -73,10 +70,11 @@ void CTPMarketDataBase::OnRspUserLogin(CThostFtdcRspUserLoginField*, CThostFtdcR
 	if (!pRspInfo->ErrorID) {
 		spdlog::trace("CTPMS: Log in successful!");
 		status_ = ConnectionStatus::Connected;
+		log_in_query_manager_.done(true);
 	} else {
 		ErrorResponse(pRspInfo);
+		log_in_query_manager_.done(false);
 	}
-	cv_.notify_one();
 }
 
 /**
@@ -84,10 +82,8 @@ void CTPMarketDataBase::OnRspUserLogin(CThostFtdcRspUserLoginField*, CThostFtdcR
  */
 void CTPMarketDataBase::LogOut() noexcept {
 	if (is_logged_in()) {
-		CThostFtdcUserLogoutField a{};
-		unique_lock lock(query_mutex_);
-		md_api_->ReqUserLogout(&a, request_id_++);
-		cv_.wait_for(lock, 2s);
+		QueryCondition c = log_in_query_manager_.query();
+		if (c == QueryCondition::Timeout) { spdlog::error("CTPM: logging out timeout."); }
 		status_ = ConnectionStatus::Disconnected;
 		spdlog::debug("CTPM:Log off market info.");
 
@@ -96,14 +92,20 @@ void CTPMarketDataBase::LogOut() noexcept {
 		md_api_ = nullptr;
 	}
 }
+void CTPMarketDataBase::LogOffASync() noexcept {
+	CThostFtdcUserLogoutField a{};
+	md_api_->ReqUserLogout(&a, request_id_++);
+	status_ = ConnectionStatus::Disconnected;
+}
 void CTPMarketDataBase::OnRspUserLogout(CThostFtdcUserLogoutField*, CThostFtdcRspInfoField* pRspInfo, int, bool) {
-	if (pRspInfo->ErrorID) {
+	if (!pRspInfo->ErrorID) {
+		spdlog::trace("CTPMS: logged out.");
+		log_out_query_manager_.done(true);
+	} else {
 		ErrorResponse(pRspInfo);
 		spdlog::error("CTPMS: Log out FAILED!");
-	} else {
-		spdlog::trace("CTPMS: logged out.");
+		log_out_query_manager_.done(false);
 	}
-	cv_.notify_one();
 }
 
 /**
@@ -124,18 +126,23 @@ void CTPMarketDataBase::Subscribe(const vector<Ticker>& ticker_list) {
 	}
 	spdlog::trace("CTPM: Asked to subscribe {} ticker, {} not in current subscribe list", list_size, count);
 
+	flexible_query_manager_.set_timeout(1s);
 	if (count > 0) {
-		unique_lock lock(query_mutex_);
 		const size_t increment = 100;
 		for (size_t start_index = 0; start_index < count; start_index += increment) {
 			size_t num = std::min(increment, count - start_index);
-			int result = md_api_->SubscribeMarketData(instruments + start_index, static_cast<int>(num));
-			RequestSendingConfirm(result, "Subscribe market data");
-			cv_status status = cv_.wait_for(lock, 2s);
-			if (status == std::cv_status::timeout) {
-				spdlog::error("fail to subscribe tickers");
+
+			auto func = [&]() {
+				int rt = md_api_->SubscribeMarketData(instruments + start_index, static_cast<int>(num));
+				RequestSendingConfirm(rt, "Subscribe market data");
+				if (!rt) { flexible_query_manager_.done(false); }
+			};
+			flexible_query_manager_.set_func(func);
+
+			QueryCondition c = flexible_query_manager_.query();
+			if (c == QueryCondition::Timeout) {
 				delete[] instruments;
-				throw NetworkError("Market data");
+				throw NetworkError("market data");
 			}
 		}
 		spdlog::trace("CTPM: CTPMarketData: request to subscribe {} contracts, {} contracts currently subscribed",
@@ -146,7 +153,7 @@ void CTPMarketDataBase::Subscribe(const vector<Ticker>& ticker_list) {
 void CTPMarketDataBase::OnRspSubMarketData(CThostFtdcSpecificInstrumentField* pSpecificInstrument,
 										   CThostFtdcRspInfoField*, int, bool bIsLast) {
 	subscribed_tickers_.insert(Ticker(pSpecificInstrument->InstrumentID));
-	if (bIsLast) { cv_.notify_one(); }
+	if (bIsLast) { flexible_query_manager_.done(true); }
 }
 
 /**
@@ -166,21 +173,25 @@ void CTPMarketDataBase::Unsubscribe(const vector<Ticker>& ticker_list) {
 		}
 	}
 	spdlog::trace("CTPM: Asked to unsubscribe {} ticker, {} in current subscribe list", list_size, count);
+	flexible_query_manager_.set_timeout(1s);
 	if (count > 0) {
-		unique_lock lock(query_mutex_);
 		const size_t increment = 100;
 		for (size_t start_index = 0; start_index < count; start_index += increment) {
 			size_t num = std::min(increment, count - start_index);
-			int result = md_api_->UnSubscribeMarketData(instruments + start_index, static_cast<int>(num));
-			RequestSendingConfirm(result, "Unsubscribe market data");
-			cv_status status = cv_.wait_for(lock, 2s);
-			if (status == std::cv_status::timeout) {
-				spdlog::error("CTPM: fail to unsubscribe tickers");
+
+			auto func = [&]() {
+				int rt = md_api_->UnSubscribeMarketData(instruments + start_index, static_cast<int>(num));
+				RequestSendingConfirm(rt, "Unsubscribe market data");
+				if (!rt) { flexible_query_manager_.done(false); }
+			};
+			flexible_query_manager_.set_func(func);
+
+			QueryCondition c = flexible_query_manager_.query();
+			if (c == QueryCondition::Timeout) {
 				delete[] instruments;
-				throw NetworkError("Market data");
-			} else {
-				spdlog::trace("CTPM: Unsubscribe tickers successful.");
+				throw NetworkError("market data");
 			}
+			spdlog::trace("CTPM: Unsubscribe tickers successful.");
 		}
 	}
 	delete[] instruments;
@@ -191,7 +202,7 @@ void CTPMarketDataBase::OnRspUnSubMarketData(CThostFtdcSpecificInstrumentField* 
 	Ticker ticker(pSpecificInstrument->InstrumentID);
 	subscribed_tickers_.erase(ticker);
 	market_data_.erase(ticker);
-	if (bIsLast) { cv_.notify_one(); }
+	if (bIsLast) { flexible_query_manager_.done(true); }
 }
 
 void CTPMarketData::OnRtnDepthMarketData(CThostFtdcDepthMarketDataField* pDepthMarketData) {

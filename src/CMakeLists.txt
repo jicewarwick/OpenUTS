@@ -14,6 +14,8 @@ target_link_libraries(
 	INTERFACE CTP::CTPMarketDataAPI
 	PRIVATE spdlog::spdlog
 )
+add_library(ASyncQueryManager asyncquerymanager.cpp)
+target_link_libraries(ASyncQueryManager PRIVATE spdlog::spdlog)
 
 # base interface
 add_library(RateThrottler INTERFACE)
@@ -31,7 +33,7 @@ target_sources(
 add_library(CTPMarketData ctpmarketdata.cpp)
 target_link_libraries(
 	CTPMarketData
-	INTERFACE MarketData CTP::CTPMarketDataAPI
+	INTERFACE MarketData ASyncQueryManager CTP::CTPMarketDataAPI
 	PRIVATE CTPUtils spdlog::spdlog
 )
 
@@ -44,7 +46,7 @@ target_link_libraries(
 	CTPAccount
 	PUBLIC TradingAccount
 	INTERFACE RateThrottler CTP::CTPTraderAPI
-	PRIVATE CTPUtils spdlog::spdlog
+	PRIVATE CTPUtils ASyncQueryManager spdlog::spdlog
 )
 
 # UnifiedTradingSystem
@@ -101,6 +103,7 @@ endif()
 # installation
 install(
 	TARGETS RateThrottler
+			ASyncQueryManager
 			DBConfig
 			CTPUtils
 			TradingUtils

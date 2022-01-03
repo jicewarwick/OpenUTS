@@ -9,6 +9,7 @@
 
 #include <CTP/ThostFtdcMdApi.h>
 #include <CTP/ThostFtdcUserApiDataType.h>
+#include <uts/asyncquerymanager.h>
 #include <uts/data_struct.h>
 #include <uts/market_data.h>
 #include <uts/observer.h>
@@ -39,10 +40,14 @@ private:
 
 	int request_id_ = 0;
 	std::filesystem::path cache_path_;
-	std::mutex query_mutex_;
-	std::condition_variable cv_;
+
+	ASyncQueryManager log_in_query_manager_{std::bind(&CTPMarketDataBase::LogOnASync, this), std::chrono::seconds(1)};
+	ASyncQueryManager log_out_query_manager_{std::bind(&CTPMarketDataBase::LogOffASync, this), std::chrono::seconds(1)};
+	ASyncQueryManager flexible_query_manager_;
 
 	// login and logout
+	void LogOnASync() noexcept;
+	void LogOffASync() noexcept;
 	void OnFrontConnected() override;
 	void OnRspUserLogin(CThostFtdcRspUserLoginField* pRspUserLogin, CThostFtdcRspInfoField* pRspInfo, int nRequestID,
 						bool bIsLast) override;

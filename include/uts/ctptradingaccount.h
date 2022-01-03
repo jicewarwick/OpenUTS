@@ -10,6 +10,7 @@
 
 #include <CTP/ThostFtdcTraderApi.h>
 #include <CTP/ThostFtdcUserApiDataType.h>
+#include <uts/asyncquerymanager.h>
 #include <uts/ratethrottler.h>
 #include <uts/tradingaccount.h>
 
@@ -104,15 +105,20 @@ private:
 	std::map<Ticker, InstrumentInfo> instrument_info_;
 	std::map<Ticker, InstrumentCommissionRate> instrument_commission_rate_;
 
-	std::mutex log_on_cv_mutex_;
-	std::condition_variable log_on_cv_;
+	ASyncQueryManager log_in_query_manager_{std::bind(&CTPTradingAccount::LogOnAsync, this), std::chrono::seconds(5)};
+	ASyncQueryManager log_out_query_manager_{std::bind(&CTPTradingAccount::LogOffAsync, this), std::chrono::seconds(1)};
+	ASyncQueryManager query_capital_query_manager_{std::bind(&CTPTradingAccount::QueryCapitalAsync, this),
+												   std::chrono::seconds(1)};
+	ASyncQueryManager query_pre_holding_query_manager_{std::bind(&CTPTradingAccount::RequestingPreHoldingAsync, this),
+													   std::chrono::seconds(1)};
+	ASyncQueryManager query_instrument_query_manager_{std::bind(&CTPTradingAccount::QueryInstrumentsASync, this),
+													  std::chrono::seconds(1)};
+	ASyncQueryManager flexible_query_manager_;
 
-	std::mutex query_mutex_;
 	mutable std::mutex capital_mutex_;
 	mutable std::mutex holding_mutex_;
 	mutable std::mutex trades_mutex_;
 	mutable std::mutex order_mutex_;
-	std::condition_variable query_cv_;
 	std::thread capital_querying_thread_;
 
 	std::mutex order_sync_mutex_;
@@ -123,12 +129,17 @@ private:
 
 	// query
 	void TestQueryRequestsPerSecond();
-	void QueryCapitalAsync();
+	void QueryCapitalAsync() noexcept;
+	void QueryInstrumentsASync() noexcept;
+	void QueryFutureCommissionRateASync(const Ticker& ticker) noexcept;
+	void QueryOptionCommissionRateASync(const Ticker& ticker) noexcept;
+	void UpdatePasswordAsync(const Password& new_password) noexcept;
 	void QueryPreHolding();
+	void RequestingPreHoldingAsync() noexcept;
 
 	OrderIndex PlaceOrderASync(CThostFtdcInputOrderField&);
 	void FilterCancelableOrders(std::map<OrderIndex, OrderRecord>::iterator& loc);
-	void PostingLoginRequest();
+	void PostingLoginRequest() noexcept;
 
 	// translation
 	CThostFtdcInputOrderField NativeOrder2CTPOrder(const Order& order) const;
@@ -144,5 +155,4 @@ private:
 		UnknownLoggingError
 	};
 	LoggingError loggin_error_{LoggingError::NoError};
-	bool success_ = false;
 };
