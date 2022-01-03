@@ -27,12 +27,6 @@ CTPMarketDataBase::CTPMarketDataBase(const vector<IPAddress>& server_addr) : Mar
 }
 
 CTPMarketDataBase::~CTPMarketDataBase() {
-	if (subscribed_tickers_.size() != 0) {
-		vector<Ticker> tickers(subscribed_tickers_.begin(), subscribed_tickers_.end());
-		try {
-			CTPMarketDataBase::Unsubscribe(tickers);
-		} catch (const std::exception&) {}
-	}
 	CTPMarketDataBase::LogOut();
 	DeleteTempFlowFolder(cache_path_);
 }
@@ -82,6 +76,13 @@ void CTPMarketDataBase::OnRspUserLogin(CThostFtdcRspUserLoginField*, CThostFtdcR
  */
 void CTPMarketDataBase::LogOut() noexcept {
 	if (is_logged_in()) {
+		if (subscribed_tickers_.size() != 0) {
+			vector<Ticker> tickers(subscribed_tickers_.begin(), subscribed_tickers_.end());
+			try {
+				Unsubscribe(tickers);
+			} catch (const std::exception&) {}
+		}
+
 		QueryCondition c = log_in_query_manager_.query();
 		if (c == QueryCondition::Timeout) { spdlog::error("CTPM: logging out timeout."); }
 		status_ = ConnectionStatus::Disconnected;
