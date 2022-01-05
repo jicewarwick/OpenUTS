@@ -38,7 +38,7 @@ int main(int argc, char* argv[]) {
 
 	TradingAccount* account = uts.GetHandle(uts.available_accounts()[0]);
 	try {
-		account->LogOnSync();
+		account->LogInSync();
 	} catch (const FirstLoginPasswordNeedChangeError& e) {}
 
 	std::this_thread::sleep_for(std::chrono::seconds(1));

@@ -16,6 +16,8 @@ set(CMAKE_LINK_WHAT_YOU_USE TRUE)
 # set(CMAKE_CXX_INCLUDE_WHAT_YOU_USE include-what-you-use)
 # set(CMAKE_CXX_CLANG_TIDY "clang-tidy")
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 # testing options
 option(BUILD_TESTING "enable testing" ON)
 option(INSTALL_TESTING "install testing" OFF)

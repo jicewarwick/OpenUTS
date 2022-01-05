@@ -1,12 +1,14 @@
 #include "asyncquerymanager.h"
 
 #include <ranges>
+#include <thread>
 
 using std::function, std::chrono::milliseconds, std::unique_lock;
 
 ASyncQueryManager::ASyncQueryManager() {}
 
-ASyncQueryManager::ASyncQueryManager(function<void()> func, milliseconds timeout) : func_(func), timeout_(timeout) {}
+ASyncQueryManager::ASyncQueryManager(function<void()> func, milliseconds timeout, milliseconds wait_time)
+	: func_(func), timeout_(timeout), wait_time_(wait_time) {}
 
 ASyncQueryManager::~ASyncQueryManager() {}
 
@@ -21,6 +23,7 @@ QueryCondition ASyncQueryManager::query(uint num_tries) {
 		}
 		if (cv_status == std::cv_status::timeout) { condition_ = QueryCondition::Timeout; }
 		if (condition_ == QueryCondition::Succcess) { return condition_; }
+		std::this_thread::sleep_for(wait_time_);
 	}
 	return condition_;
 }

@@ -41,13 +41,13 @@ private:
 	int request_id_ = 0;
 	std::filesystem::path cache_path_;
 
-	ASyncQueryManager log_in_query_manager_{std::bind(&CTPMarketDataBase::LogOnASync, this), std::chrono::seconds(1)};
-	ASyncQueryManager log_out_query_manager_{std::bind(&CTPMarketDataBase::LogOffASync, this), std::chrono::seconds(1)};
+	ASyncQueryManager log_in_query_manager_{std::bind(&CTPMarketDataBase::LogInASync, this)};
+	ASyncQueryManager log_out_query_manager_{std::bind(&CTPMarketDataBase::LogOutASync, this)};
 	ASyncQueryManager flexible_query_manager_;
 
 	// login and logout
-	void LogOnASync() noexcept;
-	void LogOffASync() noexcept;
+	void LogInASync() noexcept;
+	void LogOutASync() noexcept;
 	void OnFrontConnected() override;
 	void OnRspUserLogin(CThostFtdcRspUserLoginField* pRspUserLogin, CThostFtdcRspInfoField* pRspInfo, int nRequestID,
 						bool bIsLast) override;

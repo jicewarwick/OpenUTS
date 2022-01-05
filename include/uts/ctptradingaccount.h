@@ -32,12 +32,12 @@ public:
 	virtual const std::map<OrderIndex, OrderRecord> orders() const override;
 
 	// login
-	void LogOnSync() override;
-	void LogOnAsync() noexcept override;
+	void LogInSync() override;
+	void LogInASync() noexcept override;
 
 	// log out
-	void LogOffSync() noexcept override;
-	void LogOffAsync() noexcept override;
+	void LogOutSync() noexcept override;
+	void LogOutASync() noexcept override;
 
 	void QueryCapitalSync() override;
 	// change password
@@ -105,14 +105,11 @@ private:
 	std::map<Ticker, InstrumentInfo> instrument_info_;
 	std::map<Ticker, InstrumentCommissionRate> instrument_commission_rate_;
 
-	ASyncQueryManager log_in_query_manager_{std::bind(&CTPTradingAccount::LogOnAsync, this), std::chrono::seconds(5)};
-	ASyncQueryManager log_out_query_manager_{std::bind(&CTPTradingAccount::LogOffAsync, this), std::chrono::seconds(1)};
-	ASyncQueryManager query_capital_query_manager_{std::bind(&CTPTradingAccount::QueryCapitalAsync, this),
-												   std::chrono::seconds(1)};
-	ASyncQueryManager query_pre_holding_query_manager_{std::bind(&CTPTradingAccount::RequestingPreHoldingAsync, this),
-													   std::chrono::seconds(1)};
-	ASyncQueryManager query_instrument_query_manager_{std::bind(&CTPTradingAccount::QueryInstrumentsASync, this),
-													  std::chrono::seconds(1)};
+	ASyncQueryManager log_in_query_manager_{std::bind(&CTPTradingAccount::LogInASync, this), std::chrono::seconds(5)};
+	ASyncQueryManager log_out_query_manager_{std::bind(&CTPTradingAccount::LogOutASync, this)};
+	ASyncQueryManager query_capital_query_manager_{std::bind(&CTPTradingAccount::QueryCapitalASync, this)};
+	ASyncQueryManager query_pre_holding_query_manager_{std::bind(&CTPTradingAccount::RequestingPreHoldingASync, this)};
+	ASyncQueryManager query_instrument_query_manager_{std::bind(&CTPTradingAccount::QueryInstrumentsASync, this)};
 	ASyncQueryManager flexible_query_manager_;
 
 	mutable std::mutex capital_mutex_;
@@ -129,13 +126,13 @@ private:
 
 	// query
 	void TestQueryRequestsPerSecond();
-	void QueryCapitalAsync() noexcept;
+	void QueryCapitalASync() noexcept;
 	void QueryInstrumentsASync() noexcept;
 	void QueryFutureCommissionRateASync(const Ticker& ticker) noexcept;
 	void QueryOptionCommissionRateASync(const Ticker& ticker) noexcept;
-	void UpdatePasswordAsync(const Password& new_password) noexcept;
+	void UpdatePasswordASync(const Password& new_password) noexcept;
 	void QueryPreHolding();
-	void RequestingPreHoldingAsync() noexcept;
+	void RequestingPreHoldingASync() noexcept;
 
 	OrderIndex PlaceOrderASync(CThostFtdcInputOrderField&);
 	void FilterCancelableOrders(std::map<OrderIndex, OrderRecord>::iterator& loc);

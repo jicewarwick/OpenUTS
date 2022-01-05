@@ -33,7 +33,7 @@ int main(int argc, char* argv[]) {
 
 	if (!account_name.ends_with("test")) { throw std::runtime_error("testing account name must end with test!"); }
 
-	uts.LogOn();
+	uts.LogIn();
 	uts.QueryInstruments();
 	uts.SubscribeInstruments();
 	std::this_thread::sleep_for(std::chrono::seconds(1));

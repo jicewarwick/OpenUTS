@@ -25,7 +25,7 @@ int main(int argc, char* argv[]) {
 		return EXIT_FAILURE;
 	}
 
-	uts.LogOn();
+	uts.LogIn();
 	uts.QueryCommissionRate();
 	uts.DumpInfoJson(output_json_file);
 }

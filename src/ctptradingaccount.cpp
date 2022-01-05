@@ -41,7 +41,7 @@ CTPTradingAccount::CTPTradingAccount(const AccountInfo& account_info, const Brok
 
 /// 登出并删除临时文件夹
 CTPTradingAccount::~CTPTradingAccount() {
-	CTPTradingAccount::LogOffSync();
+	CTPTradingAccount::LogOutSync();
 	DeleteTempFlowFolder(cache_path_);
 }
 
@@ -73,7 +73,7 @@ const std::map<OrderIndex, OrderRecord> CTPTradingAccount::orders() const {
  * @exception NetworkError 网络错误, 无法连接服务器
  * @exception UnknownLoginError 其他未知登录错误
  */
-void CTPTradingAccount::LogOnSync() {
+void CTPTradingAccount::LogInSync() {
 	if (is_logged_in()) {
 		spdlog::warn("CTPT: Account {} is already logged on.", id_);
 		return;
@@ -112,7 +112,7 @@ void CTPTradingAccount::LogOnSync() {
 	};
 	capital_querying_thread_ = std::thread(query_func);
 }
-void CTPTradingAccount::LogOnAsync() noexcept {
+void CTPTradingAccount::LogInASync() noexcept {
 	if (is_logged_in()) {
 		spdlog::warn("CTPT: Account({}) is already logged in.", id_);
 		return;
@@ -127,7 +127,7 @@ void CTPTradingAccount::LogOnAsync() noexcept {
 			papi_->RegisterFront(const_cast<char*>(addr.c_str()));
 		}
 		papi_->Init();
-		spdlog::trace("CTPT: {}: Start Logon", id_);
+		spdlog::trace("CTPT: {}: Start Login", id_);
 		connection_status_ = ConnectionStatus::Connecting;
 	} else {
 		PostingLoginRequest();
@@ -152,7 +152,7 @@ void CTPTradingAccount::OnFrontConnected() {
 	spdlog::trace("CTPT: Request authentification.");
 	int rt = papi_->ReqAuthenticate(&field, request_id_++);
 	RequestSendingConfirm(rt, "Authenticate");
-	if (!rt) { log_in_query_manager_.done(false); }
+	if (rt != 0) { log_in_query_manager_.done(false); }
 	connection_status_ = ConnectionStatus::Authorizing;
 }
 
@@ -164,7 +164,7 @@ void CTPTradingAccount::PostingLoginRequest() noexcept {
 	strncpy(loginReq.UserProductInfo, account_name_.c_str(), sizeof(loginReq.UserProductInfo));
 	int rt = papi_->ReqUserLogin(&loginReq, request_id_++);
 	RequestSendingConfirm(rt, "Log on");
-	if (!rt) { log_in_query_manager_.done(false); }
+	if (rt != 0) { log_in_query_manager_.done(false); }
 	connection_status_ = ConnectionStatus::Logining;
 }
 
@@ -182,7 +182,7 @@ void CTPTradingAccount::OnRspAuthenticate(CThostFtdcRspAuthenticateField*, CThos
 }
 void CTPTradingAccount::OnRspUserLogin(CThostFtdcRspUserLoginField* pRspUserLogin, CThostFtdcRspInfoField* pRspInfo,
 									   int, bool) {
-	if (!pRspInfo->ErrorID) {
+	if (pRspInfo->ErrorID == 0) {
 		spdlog::trace("CTPTS: CTP max order ref: {}", pRspUserLogin->MaxOrderRef);
 		front_id_ = pRspUserLogin->FrontID;
 		session_id_ = pRspUserLogin->SessionID;
@@ -195,7 +195,7 @@ void CTPTradingAccount::OnRspUserLogin(CThostFtdcRspUserLoginField* pRspUserLogi
 		spdlog::trace("CTPTS: Requst Settlement Confirmation");
 		int rt = papi_->ReqSettlementInfoConfirm(&field, request_id_++);
 		RequestSendingConfirm(rt, "Settlement Confirmation");
-		if (!rt) { log_in_query_manager_.done(false); }
+		if (rt != 0) { log_in_query_manager_.done(false); }
 		connection_status_ = ConnectionStatus::LoggedIn;
 	} else {
 		switch (pRspInfo->ErrorID) {
@@ -214,7 +214,7 @@ void CTPTradingAccount::OnRspUserLogin(CThostFtdcRspUserLoginField* pRspUserLogi
 }
 void CTPTradingAccount::OnRspSettlementInfoConfirm(CThostFtdcSettlementInfoConfirmField*,
 												   CThostFtdcRspInfoField* pRspInfo, int, bool) {
-	if (!pRspInfo->ErrorID) {
+	if (pRspInfo->ErrorID == 0) {
 		spdlog::trace("CTPTS: Settlement confirmed");
 		connection_status_ = ConnectionStatus::Done;
 		log_in_query_manager_.done(true);
@@ -226,7 +226,7 @@ void CTPTradingAccount::OnRspSettlementInfoConfirm(CThostFtdcSettlementInfoConfi
 }
 
 /// 登出
-void CTPTradingAccount::LogOffSync() noexcept {
+void CTPTradingAccount::LogOutSync() noexcept {
 	if (is_logged_in()) {
 		auto ret = log_out_query_manager_.query();
 		if (ret != QueryCondition::Succcess) { spdlog::error("CTPTS: Log out error"); }
@@ -238,7 +238,7 @@ void CTPTradingAccount::LogOffSync() noexcept {
 		papi_ = nullptr;
 	}
 }
-void CTPTradingAccount::LogOffAsync() noexcept {
+void CTPTradingAccount::LogOutASync() noexcept {
 	if (connection_status_ == ConnectionStatus::LoggedOut) {
 		spdlog::warn("CTPT: Account({}) already logged out", id_);
 		log_out_query_manager_.done(true);
@@ -251,7 +251,7 @@ void CTPTradingAccount::LogOffAsync() noexcept {
 
 	int rt = papi_->ReqUserLogout(&logoff_info, request_id_++);
 	RequestSendingConfirm(rt, "Log off");
-	if (!rt) { log_out_query_manager_.done(false); }
+	if (rt != 0) { log_out_query_manager_.done(false); }
 }
 void CTPTradingAccount::OnRspUserLogout(CThostFtdcUserLogoutField*, CThostFtdcRspInfoField* pRspInfo, int, bool) {
 	if (pRspInfo->ErrorID) {
@@ -270,14 +270,14 @@ bool CTPTradingAccount::UpdatePassword(const Password& new_password) {
 		return true;
 	}
 
-	auto func = std::bind(&CTPTradingAccount::UpdatePasswordAsync, this, new_password);
+	auto func = std::bind(&CTPTradingAccount::UpdatePasswordASync, this, new_password);
 	flexible_query_manager_.set_func(func);
 	flexible_query_manager_.set_timeout(1s);
 	auto c = flexible_query_manager_.query();
 	return (c == QueryCondition::Succcess);
 }
 
-void CTPTradingAccount::UpdatePasswordAsync(const Password& new_password) noexcept {
+void CTPTradingAccount::UpdatePasswordASync(const Password& new_password) noexcept {
 	CThostFtdcUserPasswordUpdateField field{};
 	strncpy(field.BrokerID, broker_id_.c_str(), sizeof(field.BrokerID));
 	strncpy(field.UserID, account_number_.c_str(), sizeof(field.UserID));
@@ -286,7 +286,7 @@ void CTPTradingAccount::UpdatePasswordAsync(const Password& new_password) noexce
 
 	int rt = papi_->ReqUserPasswordUpdate(&field, request_id_++);
 	RequestSendingConfirm(rt, "Requesting password change");
-	if (!rt) { flexible_query_manager_.done(false); }
+	if (rt != 0) { flexible_query_manager_.done(false); }
 }
 
 void CTPTradingAccount::OnRspUserPasswordUpdate(CThostFtdcUserPasswordUpdateField*, CThostFtdcRspInfoField* pRspInfo,
@@ -346,7 +346,7 @@ void CTPTradingAccount::QueryInstrumentsASync() noexcept {
 	rate_throttler_.wait();
 	int rt = papi_->ReqQryInstrument(&field, request_id_++);
 	RequestSendingConfirm(rt, "Query Instruments");
-	if (!rt) { query_instrument_query_manager_.done(false); }
+	if (rt != 0) { query_instrument_query_manager_.done(false); }
 }
 void CTPTradingAccount::OnRspQryInstrument(CThostFtdcInstrumentField* pInstrument, CThostFtdcRspInfoField*, int,
 										   bool bIsLast) {
@@ -372,7 +372,7 @@ void CTPTradingAccount::QueryFutureCommissionRateASync(const Ticker& ticker) noe
 	rate_throttler_.wait();
 	int rt = papi_->ReqQryInstrumentCommissionRate(&a, request_id_++);
 	RequestSendingConfirm(rt, "Querying future commission rate");
-	if (!rt) { flexible_query_manager_.done(false); }
+	if (rt != 0) { flexible_query_manager_.done(false); }
 }
 
 void CTPTradingAccount::QueryOptionCommissionRateASync(const Ticker& ticker) noexcept {
@@ -383,7 +383,7 @@ void CTPTradingAccount::QueryOptionCommissionRateASync(const Ticker& ticker) noe
 	rate_throttler_.wait();
 	int rt = papi_->ReqQryOptionInstrCommRate(&field, request_id_++);
 	RequestSendingConfirm(rt, "Querying option commission rate");
-	if (!rt) { flexible_query_manager_.done(false); }
+	if (rt != 0) { flexible_query_manager_.done(false); }
 }
 
 std::map<Ticker, InstrumentCommissionRate> CTPTradingAccount::QueryCommissionRate() {
@@ -479,7 +479,7 @@ void CTPTradingAccount::QueryCapitalSync() {
 		spdlog::error("CTPT: Query capital timeout.");
 	}
 }
-void CTPTradingAccount::QueryCapitalAsync() noexcept {
+void CTPTradingAccount::QueryCapitalASync() noexcept {
 	CThostFtdcQryTradingAccountField account_info{};
 	strncpy(account_info.BrokerID, broker_id_.c_str(), sizeof(account_info.BrokerID));
 	strncpy(account_info.InvestorID, account_number_.c_str(), sizeof(account_info.InvestorID));
@@ -488,7 +488,7 @@ void CTPTradingAccount::QueryCapitalAsync() noexcept {
 	rate_throttler_.wait();
 	int rt = papi_->ReqQryTradingAccount(&account_info, request_id_++);
 	RequestSendingConfirm(rt, "Querying capital");
-	if (!rt) { query_capital_query_manager_.done(false); }
+	if (rt != 0) { query_capital_query_manager_.done(false); }
 }
 void CTPTradingAccount::OnRspQryTradingAccount(CThostFtdcTradingAccountField* pTradingAccount, CThostFtdcRspInfoField*,
 											   int, bool) {
@@ -515,7 +515,7 @@ void CTPTradingAccount::QueryPreHolding() {
 	QueryCondition c = query_pre_holding_query_manager_.query();
 	if (c != QueryCondition::Succcess) { exit(1); }
 }
-void CTPTradingAccount::RequestingPreHoldingAsync() noexcept {
+void CTPTradingAccount::RequestingPreHoldingASync() noexcept {
 	CThostFtdcQryInvestorPositionField investor_info{};
 	strncpy(investor_info.BrokerID, broker_id_.c_str(), sizeof(investor_info.BrokerID));
 	strncpy(investor_info.InvestorID, account_number_.c_str(), sizeof(investor_info.InvestorID));
@@ -523,7 +523,7 @@ void CTPTradingAccount::RequestingPreHoldingAsync() noexcept {
 	rate_throttler_.wait();
 	int rt = papi_->ReqQryInvestorPosition(&investor_info, request_id_++);
 	RequestSendingConfirm(rt, "Querying holding");
-	if (!rt) { query_pre_holding_query_manager_.done(false); }
+	if (rt != 0) { query_pre_holding_query_manager_.done(false); }
 }
 void CTPTradingAccount::OnRspQryInvestorPosition(CThostFtdcInvestorPositionField* pInvestorPosition,
 												 CThostFtdcRspInfoField*, int, bool bIsLast) {
@@ -811,9 +811,6 @@ void CTPTradingAccount::CancelAllPendingOrders() {
 }
 
 void CTPTradingAccount::TestQueryRequestsPerSecond() {
-	QueryInstruments();
-	std::this_thread::sleep_for(1s);
-
 	// Assuming: capital query can be done in less than a second.
 	int count = 0;
 	bool looping = true;

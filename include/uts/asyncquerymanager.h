@@ -16,7 +16,8 @@ enum class QueryCondition {
 class ASyncQueryManager {
 public:
 	ASyncQueryManager();
-	ASyncQueryManager(std::function<void()> func, std::chrono::milliseconds timeout);
+	ASyncQueryManager(std::function<void()> func, std::chrono::milliseconds timeout = std::chrono::seconds(1),
+					  std::chrono::milliseconds wait_time = std::chrono::seconds(3));
 	~ASyncQueryManager();
 
 	void set_func(std::function<void()> func) { func_ = func; }
@@ -29,6 +30,7 @@ public:
 private:
 	std::function<void()> func_;
 	std::chrono::milliseconds timeout_;
+	std::chrono::milliseconds wait_time_;
 
 	QueryCondition condition_{QueryCondition::Initialized};
 

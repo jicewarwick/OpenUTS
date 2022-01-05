@@ -25,7 +25,7 @@ UnifiedTradingSystem::UnifiedTradingSystem() {
 	spdlog::set_pattern("[%H:%M:%S:%e] [thread %6t] [%^---%L---%$] %v");
 	spdlog::flush_every(std::chrono::seconds(1));
 }
-UnifiedTradingSystem::~UnifiedTradingSystem() { LogOff(); }
+UnifiedTradingSystem::~UnifiedTradingSystem() { LogOut(); }
 
 bool UnifiedTradingSystem::empty() const { return accounts_.empty(); }
 
@@ -117,16 +117,16 @@ void UnifiedTradingSystem::InitFromDBConfig(const UTSConfigDB& config) {
 	setNoCloseTodayTickers(config.GetNoCloseTodayContracts());
 }
 
-void LogOnHelper(TradingAccount* account) {
+void LogInHelper(TradingAccount* account) {
 	if (!account->is_logged_in()) {
 		try {
-			account->LogOnSync();
+			account->LogInSync();
 		} catch (LoginError& error) { spdlog::error(error.what()); }
 	}
 }
 /// 登录所有注册的账号
-void UnifiedTradingSystem::LogOn() {
-	auto log_on_func = [](TradingAccount* account) { LogOnHelper(account); };
+void UnifiedTradingSystem::LogIn() {
+	auto log_on_func = [](TradingAccount* account) { LogInHelper(account); };
 	vector<std::jthread> thread_pool;
 	thread_pool.reserve(accounts_.size());
 	for (auto& [account_index, account] : accounts_) {
@@ -136,16 +136,16 @@ void UnifiedTradingSystem::LogOn() {
 	if (market_data_source_ != nullptr) { market_data_source_->LogIn(); }
 }
 /// 登录某个注册的账号
-void UnifiedTradingSystem::LogOn(const Account& account) {
+void UnifiedTradingSystem::LogIn(const Account& account) {
 	if (accounts_.contains(account)) {
-		LogOnHelper(accounts_[account]);
+		LogInHelper(accounts_[account]);
 	} else {
 		spdlog::error("Logging on a non-existing account({} - {})", account.first, account.second);
 	}
 }
 
 /// 登出所有注册的账号
-void UnifiedTradingSystem::LogOff() {
+void UnifiedTradingSystem::LogOut() {
 	if (market_data_source_ != nullptr) {
 		market_data_source_->LogOut();
 		delete market_data_source_;
@@ -154,15 +154,15 @@ void UnifiedTradingSystem::LogOff() {
 	}
 
 	for (auto& [account_index, account] : accounts_) {
-		account->LogOffSync();
+		account->LogOutSync();
 		delete account;
 	}
 	accounts_.clear();
 }
 /// 登出某个注册的账号
-void UnifiedTradingSystem::LogOff(const Account& account) {
+void UnifiedTradingSystem::LogOut(const Account& account) {
 	if (accounts_.contains(account)) {
-		accounts_[account]->LogOffSync();
+		accounts_[account]->LogOutSync();
 		delete accounts_[account];
 		accounts_.erase(account);
 	} else {
@@ -279,7 +279,7 @@ void UnifiedTradingSystem::DumpInfoJson(const std::filesystem::path& loc) const 
 }
 
 // Place order
-void UnifiedTradingSystem::PlaceOrderAsync(Order order) {
+void UnifiedTradingSystem::PlaceOrderASync(Order order) {
 	Account index{order.account_name, order.broker_name};
 	auto account = CheckAccount(index);
 	account->PlaceOrderASync(order);
@@ -295,10 +295,10 @@ void UnifiedTradingSystem::PlaceAdvancedOrderSync(Order order) {
 	auto sub_orders = ProcessAdvancedOrder(order);
 	for (auto& sub_order : sub_orders) { PlaceOrderSync(sub_order); }
 }
-/// Async下灵活订单
-void UnifiedTradingSystem::PlaceAdvancedOrderAsync(Order order) {
+/// ASync下灵活订单
+void UnifiedTradingSystem::PlaceAdvancedOrderASync(Order order) {
 	auto sub_orders = ProcessAdvancedOrder(order);
-	for (auto& sub_order : sub_orders) { PlaceOrderAsync(sub_order); }
+	for (auto& sub_order : sub_orders) { PlaceOrderASync(sub_order); }
 }
 /// 取消订单
 void UnifiedTradingSystem::CancelOrder(Account account, OrderIndex index) {

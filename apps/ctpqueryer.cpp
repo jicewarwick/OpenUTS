@@ -30,7 +30,7 @@ int main(int argc, char* argv[]) {
 		return EXIT_FAILURE;
 	}
 
-	uts.LogOn();
+	uts.LogIn();
 	uts.QueryInstruments();
 	uts.SubscribeInstruments();
 

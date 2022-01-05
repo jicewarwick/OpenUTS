@@ -60,10 +60,10 @@ public:
 	std::vector<OrderRecord> GetOrders(const Account& account) const;
 
 	// login and logout
-	void LogOn();
-	void LogOn(const Account&);
-	void LogOff();
-	void LogOff(const Account&);
+	void LogIn();
+	void LogIn(const Account&);
+	void LogOut();
+	void LogOut(const Account&);
 
 	// queries
 	void QueryInstruments();
@@ -78,14 +78,14 @@ public:
 	void SubscribeProducts(const std::vector<ProductID>& product_ids);
 
 	// place orders
-	/// Async下单
-	void PlaceOrderAsync(Order);
+	/// ASync下单
+	void PlaceOrderASync(Order);
 	/// 下单
 	void PlaceOrderSync(Order);
 
 	std::vector<Order> ProcessAdvancedOrder(Order order);
 	void PlaceAdvancedOrderSync(Order);
-	void PlaceAdvancedOrderAsync(Order);
+	void PlaceAdvancedOrderASync(Order);
 
 	void CancelOrder(Account, OrderIndex);
 

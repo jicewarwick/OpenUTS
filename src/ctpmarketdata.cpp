@@ -7,8 +7,8 @@
 #include "ctp_utils.h"
 #include "utsexceptions.h"
 
-using std::vector, std::string, std::cv_status, std::lock_guard, std::mutex, std::unique_lock;
-using namespace std::chrono_literals;
+using std::vector, std::string;
+using std::chrono_literals::operator""s;
 
 /**
  * @brief 构造CTPMarketData
@@ -47,7 +47,7 @@ void CTPMarketDataBase::LogIn() {
 		throw LoginError();
 	}
 }
-void CTPMarketDataBase::LogOnASync() noexcept {
+void CTPMarketDataBase::LogInASync() noexcept {
 	md_api_ = CThostFtdcMdApi::CreateFtdcMdApi(cache_path_.string().c_str());
 	md_api_->RegisterSpi(this);
 	for (IPAddress& addr : server_addr_) {
@@ -61,7 +61,7 @@ void CTPMarketDataBase::OnFrontConnected() {
 	md_api_->ReqUserLogin(&reqUserLogin, request_id_++);
 }
 void CTPMarketDataBase::OnRspUserLogin(CThostFtdcRspUserLoginField*, CThostFtdcRspInfoField* pRspInfo, int, bool) {
-	if (!pRspInfo->ErrorID) {
+	if (pRspInfo->ErrorID == 0) {
 		spdlog::trace("CTPMS: Log in successful!");
 		status_ = ConnectionStatus::Connected;
 		log_in_query_manager_.done(true);
@@ -93,13 +93,13 @@ void CTPMarketDataBase::LogOut() noexcept {
 		md_api_ = nullptr;
 	}
 }
-void CTPMarketDataBase::LogOffASync() noexcept {
+void CTPMarketDataBase::LogOutASync() noexcept {
 	CThostFtdcUserLogoutField a{};
 	md_api_->ReqUserLogout(&a, request_id_++);
 	status_ = ConnectionStatus::Disconnected;
 }
 void CTPMarketDataBase::OnRspUserLogout(CThostFtdcUserLogoutField*, CThostFtdcRspInfoField* pRspInfo, int, bool) {
-	if (!pRspInfo->ErrorID) {
+	if (pRspInfo->ErrorID == 0) {
 		spdlog::trace("CTPMS: logged out.");
 		log_out_query_manager_.done(true);
 	} else {
@@ -136,7 +136,7 @@ void CTPMarketDataBase::Subscribe(const vector<Ticker>& ticker_list) {
 			auto func = [&]() {
 				int rt = md_api_->SubscribeMarketData(instruments + start_index, static_cast<int>(num));
 				RequestSendingConfirm(rt, "Subscribe market data");
-				if (!rt) { flexible_query_manager_.done(false); }
+				if (rt != 0) { flexible_query_manager_.done(false); }
 			};
 			flexible_query_manager_.set_func(func);
 
@@ -183,7 +183,7 @@ void CTPMarketDataBase::Unsubscribe(const vector<Ticker>& ticker_list) {
 			auto func = [&]() {
 				int rt = md_api_->UnSubscribeMarketData(instruments + start_index, static_cast<int>(num));
 				RequestSendingConfirm(rt, "Unsubscribe market data");
-				if (!rt) { flexible_query_manager_.done(false); }
+				if (rt != 0) { flexible_query_manager_.done(false); }
 			};
 			flexible_query_manager_.set_func(func);
 

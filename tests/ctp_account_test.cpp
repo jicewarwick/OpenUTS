@@ -26,7 +26,7 @@ TEST(CTPTradingAccountLoginTest, WrongPasswordTest) {
 	map<Ticker, InstrumentInfo> instrument_info;
 	map<Ticker, MarketDepth> market_data;
 	CTPTradingAccount account(account_info, broker_info);
-	ASSERT_THROW(account.LogOnSync(), AccountNumberPasswordError);
+	ASSERT_THROW(account.LogInSync(), AccountNumberPasswordError);
 }
 
 class CTPTradingAccountTest : public ::testing::Test {
@@ -42,11 +42,11 @@ protected:
 		map<Ticker, MarketDepth> market_data;
 		account_ = new CTPTradingAccount(account_info, broker_info);
 
-		account_->LogOnSync();
+		account_->LogInSync();
 	}
 
 	static void TearDownTestCase() {
-		account_->LogOffSync();
+		account_->LogOutSync();
 		delete account_;
 	}
 };

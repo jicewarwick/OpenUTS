@@ -38,22 +38,22 @@ public:
 	/// 返回委托记录
 	virtual const std::map<OrderIndex, OrderRecord> orders() const = 0;
 
-	/// Async登录函数
-	virtual void LogOnAsync() noexcept = 0;
+	/// ASync登录函数
+	virtual void LogInASync() noexcept = 0;
 	/// 登录函数
-	virtual void LogOnSync() = 0;
+	virtual void LogInSync() = 0;
 
-	/// Async登出函数
-	virtual void LogOffAsync() noexcept = 0;
+	/// ASync登出函数
+	virtual void LogOutASync() noexcept = 0;
 	/// 登出函数
-	virtual void LogOffSync() noexcept = 0;
+	virtual void LogOutSync() noexcept = 0;
 
 	/// 刷新资金
 	virtual void QueryCapitalSync() = 0;
 	/// 修改密码
 	virtual bool UpdatePassword(const Password& new_password) = 0;
 
-	/// Async下单
+	/// ASync下单
 	virtual OrderIndex PlaceOrderASync(Order) = 0;
 	/// 下单函数
 	virtual void PlaceOrderSync(Order) = 0;

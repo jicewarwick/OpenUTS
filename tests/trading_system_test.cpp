@@ -28,7 +28,7 @@ protected:
 		json info = ReadJsonFile("test_files/simnow.json");
 		uts_ = new UnifiedTradingSystem();
 		uts_->InitFromJsonConfig(info);
-		uts_->LogOn();
+		uts_->LogIn();
 		uts_->QueryInstruments();
 		uts_->SubscribeInstruments();
 		instrument_info_ = uts_->instrument_info();
@@ -40,7 +40,7 @@ protected:
 	}
 
 	static void TearDownTestCase() {
-		uts_->LogOff();
+		uts_->LogOut();
 		delete uts_;
 	}
 };
@@ -130,27 +130,27 @@ TEST_F(TradingSystemTest, OrderErrorTest) {
 }
 TEST_F(TradingSystemTest, MarketOrderTest) {
 	vector<Order> orders = OrderTestTemplate("test_files/market_orders.json");
-	for (auto& adv_order : orders) { uts_->PlaceAdvancedOrderAsync(adv_order); }
+	for (auto& adv_order : orders) { uts_->PlaceAdvancedOrderASync(adv_order); }
 }
 
 TEST_F(TradingSystemTest, FAKOrderTest) {
 	vector<Order> orders = OrderTestTemplate("test_files/fak_orders.json");
-	for (auto& adv_order : orders) { uts_->PlaceAdvancedOrderAsync(adv_order); }
+	for (auto& adv_order : orders) { uts_->PlaceAdvancedOrderASync(adv_order); }
 }
 
 TEST_F(TradingSystemTest, AskPriceLimitOrderTest) {
 	vector<Order> orders = OrderTestTemplate("test_files/ask_price_limit_order.json");
-	for (auto& adv_order : orders) { uts_->PlaceAdvancedOrderAsync(adv_order); }
+	for (auto& adv_order : orders) { uts_->PlaceAdvancedOrderASync(adv_order); }
 }
 
 TEST_F(TradingSystemTest, BidPriceLimitOrderTest) {
 	vector<Order> orders = OrderTestTemplate("test_files/bid_price_limit_order.json");
-	for (auto& adv_order : orders) { uts_->PlaceAdvancedOrderAsync(adv_order); }
+	for (auto& adv_order : orders) { uts_->PlaceAdvancedOrderASync(adv_order); }
 }
 
 TEST_F(TradingSystemTest, BestPriceLimitOrderTest) {
 	vector<Order> orders = OrderTestTemplate("test_files/best_price_limit_order.json");
-	for (auto& adv_order : orders) { uts_->PlaceAdvancedOrderAsync(adv_order); }
+	for (auto& adv_order : orders) { uts_->PlaceAdvancedOrderASync(adv_order); }
 }
 
 TEST_F(TradingSystemTest, ClearAllHoldingsTest) {
